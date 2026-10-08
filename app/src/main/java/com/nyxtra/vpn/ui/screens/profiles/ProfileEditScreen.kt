@@ -49,12 +49,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.ProtocolType
 import com.nyxtra.vpn.data.model.TransportType
-import com.nyxtra.vpn.ui.theme.AccentCoral
-import com.nyxtra.vpn.ui.theme.AccentCyan
-import com.nyxtra.vpn.ui.theme.DarkBackground
-import com.nyxtra.vpn.ui.theme.DarkBorder
-import com.nyxtra.vpn.ui.theme.DarkCard
-import com.nyxtra.vpn.ui.theme.DarkSurface
+import com.nyxtra.vpn.ui.theme.ActionPrimaryBg
+import com.nyxtra.vpn.ui.theme.ActionPrimaryText
+import com.nyxtra.vpn.ui.theme.BorderStrong
+import com.nyxtra.vpn.ui.theme.BorderSubtle
+import com.nyxtra.vpn.ui.theme.CanvasBg
+import com.nyxtra.vpn.ui.theme.CardBg
+import com.nyxtra.vpn.ui.theme.CardSelectedBg
+import com.nyxtra.vpn.ui.theme.SurfaceBg
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
@@ -84,14 +86,15 @@ fun ProfileEditScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(CanvasBg)
     ) {
         // App Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .background(DarkSurface)
+                .background(SurfaceBg)
+                .border(1.dp, BorderSubtle)
                 .padding(horizontal = 6.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -106,8 +109,9 @@ fun ProfileEditScreen(
             Text(
                 text = "Edit Profile",
                 color = TextPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.2).sp
             )
         }
 
@@ -116,15 +120,16 @@ fun ProfileEditScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Protocol Tabs
             Text(
                 text = "PROTOCOL",
                 color = TextMuted,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -135,12 +140,12 @@ fun ProfileEditScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) AccentCoral.copy(alpha = 0.2f) else DarkCard)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isSelected) CardSelectedBg else CardBg)
                             .border(
                                 width = 1.dp,
-                                color = if (isSelected) AccentCoral else DarkBorder,
-                                shape = RoundedCornerShape(8.dp)
+                                color = if (isSelected) BorderStrong else BorderSubtle,
+                                shape = RoundedCornerShape(6.dp)
                             )
                             .clickable { protocol = proto }
                             .padding(vertical = 10.dp),
@@ -148,9 +153,10 @@ fun ProfileEditScreen(
                     ) {
                         Text(
                             text = proto.displayName,
-                            color = if (isSelected) AccentCoral else TextSecondary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+                            color = if (isSelected) TextPrimary else TextSecondary,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )
                     }
                 }
@@ -158,7 +164,7 @@ fun ProfileEditScreen(
 
             // Name
             EditInput(
-                label = "Remarks / Name",
+                label = "REMARKS / NAME",
                 value = name,
                 onValueChange = { name = it },
                 placeholder = "e.g. SG Melbikomas 01"
@@ -171,7 +177,7 @@ fun ProfileEditScreen(
             ) {
                 Box(modifier = Modifier.weight(2.5f)) {
                     EditInput(
-                        label = "Server / Destination IP",
+                        label = "SERVER / DESTINATION IP",
                         value = serverAddress,
                         onValueChange = { serverAddress = it },
                         placeholder = "104.18.41.141 or host"
@@ -180,7 +186,7 @@ fun ProfileEditScreen(
 
                 Box(modifier = Modifier.weight(1f)) {
                     EditInput(
-                        label = "Port",
+                        label = "PORT",
                         value = serverPort.toString(),
                         onValueChange = { serverPort = it.toIntOrNull() ?: 443 },
                         placeholder = "443",
@@ -189,17 +195,17 @@ fun ProfileEditScreen(
                 }
             }
 
-            // Bug Host (Injeksi Host Header)
+            // Bug Host
             EditInput(
-                label = "Bug Host (Custom Host / SNI)",
+                label = "BUG HOST (HTTP HOST HEADER)",
                 value = bugHost,
                 onValueChange = { bugHost = it },
-                placeholder = "e.g. quiz.vidio.com or graph.facebook.com"
+                placeholder = "e.g. quiz.vidio.com"
             )
 
             // SNI
             EditInput(
-                label = "SNI (Server Name Indication)",
+                label = "SNI (SERVER NAME INDICATION)",
                 value = sni,
                 onValueChange = { sni = it },
                 placeholder = "Leave empty to fallback to Bug Host"
@@ -207,7 +213,7 @@ fun ProfileEditScreen(
 
             // UUID / Password
             EditInput(
-                label = if (protocol == ProtocolType.TROJAN) "Password" else "UUID",
+                label = if (protocol == ProtocolType.TROJAN) "PASSWORD" else "UUID",
                 value = uuidOrPassword,
                 onValueChange = { uuidOrPassword = it },
                 placeholder = "3a7b-..."
@@ -217,9 +223,10 @@ fun ProfileEditScreen(
             Text(
                 text = "TRANSPORT",
                 color = TextMuted,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -230,12 +237,12 @@ fun ProfileEditScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) AccentCyan.copy(alpha = 0.15f) else DarkCard)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isSelected) CardSelectedBg else CardBg)
                             .border(
                                 width = 1.dp,
-                                color = if (isSelected) AccentCyan else DarkBorder,
-                                shape = RoundedCornerShape(8.dp)
+                                color = if (isSelected) BorderStrong else BorderSubtle,
+                                shape = RoundedCornerShape(6.dp)
                             )
                             .clickable { transport = trans }
                             .padding(vertical = 8.dp),
@@ -243,9 +250,10 @@ fun ProfileEditScreen(
                     ) {
                         Text(
                             text = trans.displayName,
-                            color = if (isSelected) AccentCyan else TextSecondary,
+                            color = if (isSelected) TextPrimary else TextSecondary,
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     }
                 }
@@ -253,7 +261,7 @@ fun ProfileEditScreen(
 
             // Path
             EditInput(
-                label = "Path",
+                label = "PATH",
                 value = path,
                 onValueChange = { path = it },
                 placeholder = "/ws or /httpupgrade"
@@ -263,20 +271,25 @@ fun ProfileEditScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(DarkCard)
-                    .border(1.dp, DarkBorder, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(CardBg)
+                    .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "TLS Encryption", color = TextPrimary, fontSize = 14.sp)
+                Column {
+                    Text(text = "TLS Encryption", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text(text = "Enable transport security layer", color = TextMuted, fontSize = 11.sp)
+                }
                 Switch(
                     checked = isTls,
                     onCheckedChange = { isTls = it },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = AccentCoral,
-                        checkedTrackColor = AccentCoral.copy(alpha = 0.3f)
+                        checkedThumbColor = ActionPrimaryText,
+                        checkedTrackColor = ActionPrimaryBg,
+                        uncheckedThumbColor = TextMuted,
+                        uncheckedTrackColor = SurfaceBg
                     )
                 )
             }
@@ -285,25 +298,30 @@ fun ProfileEditScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(DarkCard)
-                    .border(1.dp, DarkBorder, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(CardBg)
+                    .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "Allow Insecure", color = TextPrimary, fontSize = 14.sp)
+                Column {
+                    Text(text = "Allow Insecure", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text(text = "Skip TLS certificate verification", color = TextMuted, fontSize = 11.sp)
+                }
                 Switch(
                     checked = allowInsecure,
                     onCheckedChange = { allowInsecure = it },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = AccentCyan,
-                        checkedTrackColor = AccentCyan.copy(alpha = 0.3f)
+                        checkedThumbColor = ActionPrimaryText,
+                        checkedTrackColor = ActionPrimaryBg,
+                        uncheckedThumbColor = TextMuted,
+                        uncheckedTrackColor = SurfaceBg
                     )
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Save Button
             Button(
@@ -331,16 +349,16 @@ fun ProfileEditScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentCoral),
-                shape = RoundedCornerShape(8.dp)
+                    .height(46.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = ActionPrimaryBg),
+                shape = RoundedCornerShape(6.dp)
             ) {
-                Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = TextPrimary)
+                Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = ActionPrimaryText, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "SAVE CONFIG", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(text = "SAVE CONFIGURATION", color = ActionPrimaryText, fontWeight = FontWeight.Bold, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = 0.5.sp)
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -357,23 +375,25 @@ private fun EditInput(
         Text(
             text = label,
             color = TextMuted,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(bottom = 4.dp)
+            fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.8.sp,
+            modifier = Modifier.padding(bottom = 6.dp)
         )
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(placeholder, color = TextMuted, fontSize = 12.sp) },
+            placeholder = { Text(placeholder, color = TextMuted, fontSize = 12.sp, fontFamily = FontFamily.Monospace) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(6.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = DarkCard,
-                unfocusedContainerColor = DarkCard,
-                focusedBorderColor = AccentCoral,
-                unfocusedBorderColor = DarkBorder,
+                focusedContainerColor = CardBg,
+                unfocusedContainerColor = CardBg,
+                focusedBorderColor = BorderStrong,
+                unfocusedBorderColor = BorderSubtle,
                 focusedTextColor = TextPrimary,
                 unfocusedTextColor = TextPrimary
             )

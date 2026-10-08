@@ -20,9 +20,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.LogEntry
 import com.nyxtra.vpn.data.model.LogLevel
-import com.nyxtra.vpn.ui.theme.AccentCoral
-import com.nyxtra.vpn.ui.theme.AccentCyan
-import com.nyxtra.vpn.ui.theme.AccentOrange
+import com.nyxtra.vpn.ui.theme.PastelCyan
+import com.nyxtra.vpn.ui.theme.PastelCyanSubtle
+import com.nyxtra.vpn.ui.theme.PastelOrange
+import com.nyxtra.vpn.ui.theme.PastelOrangeSubtle
+import com.nyxtra.vpn.ui.theme.PastelRed
+import com.nyxtra.vpn.ui.theme.PastelRedSubtle
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 
@@ -31,17 +34,17 @@ fun LogItemRow(
     entry: LogEntry,
     modifier: Modifier = Modifier
 ) {
-    val levelColor = when (entry.level) {
-        LogLevel.DEBUG -> TextMuted
-        LogLevel.INFO -> AccentCyan
-        LogLevel.WARN -> AccentOrange
-        LogLevel.ERROR -> AccentCoral
+    val (textColor, bgColor) = when (entry.level) {
+        LogLevel.DEBUG -> TextMuted to TextMuted.copy(alpha = 0.1f)
+        LogLevel.INFO -> PastelCyan to PastelCyanSubtle
+        LogLevel.WARN -> PastelOrange to PastelOrangeSubtle
+        LogLevel.ERROR -> PastelRed to PastelRedSubtle
     }
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 3.dp),
         verticalAlignment = Alignment.Top
     ) {
         Text(
@@ -56,35 +59,29 @@ fun LogItemRow(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(3.dp))
-                .background(levelColor.copy(alpha = 0.15f))
+                .background(bgColor)
                 .padding(horizontal = 4.dp, vertical = 1.dp)
         ) {
             Text(
                 text = entry.level.name,
-                color = levelColor,
-                fontSize = 10.sp,
+                color = textColor,
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 0.5.sp
             )
         }
 
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
-        Text(
-            text = "[${entry.tag}]",
-            color = TextMuted,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace
-        )
-
-        Spacer(modifier = Modifier.width(6.dp))
-
-        Text(
-            text = entry.message,
-            color = TextPrimary,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "[${entry.tag}] ${entry.message}",
+                color = if (entry.level == LogLevel.ERROR) PastelRed else TextPrimary,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                lineHeight = 15.sp
+            )
+        }
     }
 }

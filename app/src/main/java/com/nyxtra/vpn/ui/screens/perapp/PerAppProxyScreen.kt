@@ -43,12 +43,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.ui.components.AppItemRow
-import com.nyxtra.vpn.ui.theme.AccentCoral
-import com.nyxtra.vpn.ui.theme.AccentCyan
-import com.nyxtra.vpn.ui.theme.DarkBackground
-import com.nyxtra.vpn.ui.theme.DarkBorder
-import com.nyxtra.vpn.ui.theme.DarkCard
-import com.nyxtra.vpn.ui.theme.DarkSurface
+import com.nyxtra.vpn.ui.theme.ActionPrimaryBg
+import com.nyxtra.vpn.ui.theme.ActionPrimaryText
+import com.nyxtra.vpn.ui.theme.BorderStrong
+import com.nyxtra.vpn.ui.theme.BorderSubtle
+import com.nyxtra.vpn.ui.theme.CanvasBg
+import com.nyxtra.vpn.ui.theme.CardBg
+import com.nyxtra.vpn.ui.theme.CardSelectedBg
+import com.nyxtra.vpn.ui.theme.PastelCyan
+import com.nyxtra.vpn.ui.theme.SurfaceBg
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
@@ -69,14 +72,15 @@ fun PerAppProxyScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(CanvasBg)
     ) {
         // App Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .background(DarkSurface)
+                .background(SurfaceBg)
+                .border(1.dp, BorderSubtle)
                 .padding(horizontal = 6.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -91,8 +95,9 @@ fun PerAppProxyScreen(
             Text(
                 text = "Per-App Proxy",
                 color = TextPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.2).sp
             )
         }
 
@@ -100,7 +105,7 @@ fun PerAppProxyScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -108,18 +113,18 @@ fun PerAppProxyScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(DarkCard)
-                        .border(1.dp, DarkBorder, RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(CardBg)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
                         .padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "App Filtering", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(text = "App Traffic Filtering", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         Text(
-                            text = if (enabled) "Only selected apps are affected" else "Disabled (all traffic routed)",
-                            color = TextSecondary,
+                            text = if (enabled) "Only selected applications are routed" else "Routing all system traffic",
+                            color = TextMuted,
                             fontSize = 12.sp
                         )
                     }
@@ -128,28 +133,30 @@ fun PerAppProxyScreen(
                         checked = enabled,
                         onCheckedChange = { viewModel.toggleEnabled(it) },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = AccentCoral,
-                            checkedTrackColor = AccentCoral.copy(alpha = 0.3f)
+                            checkedThumbColor = ActionPrimaryText,
+                            checkedTrackColor = ActionPrimaryBg,
+                            uncheckedThumbColor = TextMuted,
+                            uncheckedTrackColor = SurfaceBg
                         )
                     )
                 }
             }
 
             if (enabled) {
-                // Mode selector: Whitelist vs Blacklist
+                // Mode selector
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterModePill(
-                            label = "Whitelist Mode",
+                            label = "WHITELIST MODE",
                             isSelected = isWhitelist,
                             onClick = { viewModel.setMode(true) },
                             modifier = Modifier.weight(1f)
                         )
                         FilterModePill(
-                            label = "Blacklist Mode",
+                            label = "BLACKLIST MODE",
                             isSelected = !isWhitelist,
                             onClick = { viewModel.setMode(false) },
                             modifier = Modifier.weight(1f)
@@ -157,7 +164,7 @@ fun PerAppProxyScreen(
                     }
                 }
 
-                // Quick buttons
+                // Quick action buttons
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -165,43 +172,45 @@ fun PerAppProxyScreen(
                     ) {
                         Button(
                             onClick = { viewModel.selectAllGames() },
-                            colors = ButtonDefaults.buttonColors(containerColor = DarkCard),
-                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = CardBg),
+                            shape = RoundedCornerShape(6.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(imageVector = Icons.Default.SportsEsports, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Default.SportsEsports, contentDescription = null, tint = PastelCyan, modifier = Modifier.size(15.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Select Games", color = TextPrimary, fontSize = 12.sp)
+                            Text(text = "SELECT GAMES", color = TextPrimary, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                         }
 
                         Button(
                             onClick = { viewModel.clearAll() },
-                            colors = ButtonDefaults.buttonColors(containerColor = DarkCard),
-                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = CardBg),
+                            shape = RoundedCornerShape(6.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(imageVector = Icons.Default.ClearAll, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Default.ClearAll, contentDescription = null, tint = TextMuted, modifier = Modifier.size(15.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Clear All", color = TextPrimary, fontSize = 12.sp)
+                            Text(text = "CLEAR ALL", color = TextPrimary, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                         }
                     }
                 }
 
-                // Search
+                // Search field
                 item {
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { viewModel.updateSearch(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search apps...", color = TextMuted, fontSize = 13.sp) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextMuted, modifier = Modifier.size(18.dp)) },
+                        placeholder = { Text("Filter applications by package or label...", color = TextMuted, fontSize = 12.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp)) },
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(6.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = DarkCard,
-                            unfocusedContainerColor = DarkCard,
-                            focusedBorderColor = AccentCoral,
-                            unfocusedBorderColor = DarkBorder,
+                            focusedContainerColor = CardBg,
+                            unfocusedContainerColor = CardBg,
+                            focusedBorderColor = BorderStrong,
+                            unfocusedBorderColor = BorderSubtle,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
                         )
@@ -213,8 +222,8 @@ fun PerAppProxyScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "APPLICATIONS (${apps.size})", color = TextMuted, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                        Text(text = "$selectedCount selected", color = AccentCyan, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                        Text(text = "INSTALLED APPLICATIONS (${apps.size})", color = TextMuted, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
+                        Text(text = "$selectedCount SELECTED", color = PastelCyan, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -240,20 +249,26 @@ private fun FilterModePill(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val bg = if (isSelected) CardSelectedBg else CardBg
+    val borderCol = if (isSelected) BorderStrong else BorderSubtle
+    val textCol = if (isSelected) TextPrimary else TextMuted
+
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) AccentCoral.copy(alpha = 0.15f) else DarkCard)
-            .border(1.dp, if (isSelected) AccentCoral else DarkBorder, RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(6.dp))
+            .background(bg)
+            .border(1.dp, borderCol, RoundedCornerShape(6.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
+            .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
-            color = if (isSelected) AccentCoral else TextSecondary,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold
+            color = textCol,
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
         )
     }
 }

@@ -1,6 +1,7 @@
 package com.nyxtra.vpn.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
@@ -25,14 +25,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.VpnState
-import com.nyxtra.vpn.ui.theme.AccentCoral
+import com.nyxtra.vpn.ui.theme.ActionPrimaryBg
+import com.nyxtra.vpn.ui.theme.ActionPrimaryText
+import com.nyxtra.vpn.ui.theme.BorderStrong
+import com.nyxtra.vpn.ui.theme.PastelRed
+import com.nyxtra.vpn.ui.theme.PastelRedSubtle
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -61,25 +63,24 @@ fun FloatingConnectionButton(
 
     Box(modifier = modifier) {
         if (isConnected) {
-            // Connected Pill: [ ■  01:45:36 ]
+            // Connected State: Utilitarian tactile card with timer and stop indicator
             Row(
                 modifier = Modifier
-                    .shadow(12.dp, RoundedCornerShape(28.dp))
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(AccentCoral)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(PastelRedSubtle)
+                    .border(1.dp, PastelRed.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                     .clickable(onClick = onClick)
-                    .padding(horizontal = 22.dp, vertical = 14.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                // Stop square
                 Box(
                     modifier = Modifier
-                        .size(16.dp)
-                        .background(Color.White, RoundedCornerShape(3.dp))
+                        .size(10.dp)
+                        .background(PastelRed, RoundedCornerShape(2.dp))
                 )
 
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
                 val hours = elapsedSeconds / 3600
                 val minutes = (elapsedSeconds % 3600) / 60
@@ -88,35 +89,66 @@ fun FloatingConnectionButton(
 
                 Text(
                     text = timerText,
-                    color = Color.White,
-                    fontSize = 17.sp,
+                    color = PastelRed,
+                    fontSize = 14.sp,
                     fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Text(
+                    text = "DISCONNECT",
+                    color = PastelRed.copy(alpha = 0.8f),
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.5.sp
                 )
             }
         } else {
-            // Disconnected Round FAB: [ ⚡ ]
-            Box(
+            // Disconnected State: Solid flat button with 0dp shadow, crisp 8dp corner radius
+            Row(
                 modifier = Modifier
-                    .size(62.dp)
-                    .shadow(10.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(AccentCoral)
-                    .clickable(onClick = onClick),
-                contentAlignment = Alignment.Center
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(ActionPrimaryBg)
+                    .border(1.dp, BorderStrong, RoundedCornerShape(8.dp))
+                    .clickable(onClick = onClick)
+                    .padding(horizontal = 18.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
                 if (isConnecting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(28.dp),
-                        color = Color.White,
-                        strokeWidth = 3.dp
+                        modifier = Modifier.size(16.dp),
+                        color = ActionPrimaryText,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "CONNECTING...",
+                        color = ActionPrimaryText,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Default.Bolt,
                         contentDescription = "Connect",
-                        tint = Color.White,
-                        modifier = Modifier.size(34.dp)
+                        tint = ActionPrimaryText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "CONNECT",
+                        color = ActionPrimaryText,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
                     )
                 }
             }

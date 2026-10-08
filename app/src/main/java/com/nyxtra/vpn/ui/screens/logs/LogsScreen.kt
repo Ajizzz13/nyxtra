@@ -43,11 +43,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.LogLevel
 import com.nyxtra.vpn.ui.components.LogItemRow
-import com.nyxtra.vpn.ui.theme.AccentCoral
-import com.nyxtra.vpn.ui.theme.DarkBackground
-import com.nyxtra.vpn.ui.theme.DarkBorder
-import com.nyxtra.vpn.ui.theme.DarkCard
-import com.nyxtra.vpn.ui.theme.DarkSurface
+import com.nyxtra.vpn.ui.theme.BorderStrong
+import com.nyxtra.vpn.ui.theme.BorderSubtle
+import com.nyxtra.vpn.ui.theme.CanvasBg
+import com.nyxtra.vpn.ui.theme.CardBg
+import com.nyxtra.vpn.ui.theme.CardSelectedBg
+import com.nyxtra.vpn.ui.theme.SurfaceBg
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
@@ -74,14 +75,15 @@ fun LogsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(CanvasBg)
     ) {
         // App Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .background(DarkSurface)
+                .background(SurfaceBg)
+                .border(1.dp, BorderSubtle)
                 .padding(horizontal = 6.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -98,8 +100,9 @@ fun LogsScreen(
                 Text(
                     text = "Live Logs",
                     color = TextPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.2).sp
                 )
             }
 
@@ -109,11 +112,11 @@ fun LogsScreen(
                     clipboardManager.setText(AnnotatedString(text))
                     Toast.makeText(context, "Logs copied!", Toast.LENGTH_SHORT).show()
                 }) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = TextPrimary, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = TextSecondary, modifier = Modifier.size(19.dp))
                 }
 
                 IconButton(onClick = { viewModel.clearLogs() }) {
-                    Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", tint = TextPrimary, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(19.dp))
                 }
             }
         }
@@ -131,19 +134,19 @@ fun LogsScreen(
             LogFilterChip("ERROR", selectedLevel == LogLevel.ERROR, { viewModel.filterByLevel(LogLevel.ERROR) }, Modifier.weight(1f))
         }
 
-        // Terminal view
+        // Terminal container
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 14.dp, vertical = 6.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(DarkCard)
-                .border(1.dp, DarkBorder, RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(8.dp))
+                .background(CardBg)
+                .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
                 .padding(10.dp)
         ) {
             if (logs.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = "Log buffer empty", color = TextMuted, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                    Text(text = "LOG BUFFER EMPTY", color = TextMuted, fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 0.8.sp)
                 }
             } else {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -163,21 +166,26 @@ private fun LogFilterChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val bg = if (isSelected) CardSelectedBg else CardBg
+    val borderCol = if (isSelected) BorderStrong else BorderSubtle
+    val textCol = if (isSelected) TextPrimary else TextMuted
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(if (isSelected) AccentCoral.copy(alpha = 0.2f) else DarkCard)
-            .border(1.dp, if (isSelected) AccentCoral else DarkBorder, RoundedCornerShape(6.dp))
+            .background(bg)
+            .border(1.dp, borderCol, RoundedCornerShape(6.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
-            color = if (isSelected) AccentCoral else TextSecondary,
+            color = textCol,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
         )
     }
 }

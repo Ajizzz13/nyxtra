@@ -57,14 +57,17 @@ import com.nyxtra.vpn.data.model.VpnState
 import com.nyxtra.vpn.ui.components.FloatingConnectionButton
 import com.nyxtra.vpn.ui.components.TunnelProfileCard
 import com.nyxtra.vpn.ui.screens.profiles.ProfilesViewModel
-import com.nyxtra.vpn.ui.theme.AccentCoral
-import com.nyxtra.vpn.ui.theme.AccentCyan
-import com.nyxtra.vpn.ui.theme.AccentGreen
-import com.nyxtra.vpn.ui.theme.DarkBackground
-import com.nyxtra.vpn.ui.theme.DarkBorder
-import com.nyxtra.vpn.ui.theme.DarkCard
-import com.nyxtra.vpn.ui.theme.DarkSurface
-import com.nyxtra.vpn.ui.theme.DarkTab
+import com.nyxtra.vpn.ui.theme.ActionPrimaryBg
+import com.nyxtra.vpn.ui.theme.BorderStrong
+import com.nyxtra.vpn.ui.theme.BorderSubtle
+import com.nyxtra.vpn.ui.theme.CanvasBg
+import com.nyxtra.vpn.ui.theme.CardBg
+import com.nyxtra.vpn.ui.theme.CardSelectedBg
+import com.nyxtra.vpn.ui.theme.PastelCyan
+import com.nyxtra.vpn.ui.theme.PastelGreen
+import com.nyxtra.vpn.ui.theme.PastelGreenSubtle
+import com.nyxtra.vpn.ui.theme.SurfaceBg
+import com.nyxtra.vpn.ui.theme.TabBg
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
@@ -93,16 +96,17 @@ fun DashboardScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(CanvasBg)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Sleek Top App Bar
+            // Editorial Top App Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .background(DarkSurface)
-                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                    .background(SurfaceBg)
+                    .border(1.dp, BorderSubtle)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -120,19 +124,20 @@ fun DashboardScreen(
                     Text(
                         text = "Nyxtra",
                         color = TextPrimary,
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-0.3).sp
                     )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Import URI / Add button
+                    // Import URI button
                     IconButton(onClick = { profilesViewModel.showImportDialog() }) {
                         Icon(
                             imageVector = Icons.Default.ContentPaste,
                             contentDescription = "Import URI",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(20.dp)
+                            tint = TextSecondary,
+                            modifier = Modifier.size(19.dp)
                         )
                     }
 
@@ -143,8 +148,8 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.QrCodeScanner,
                             contentDescription = "Scan QR",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(20.dp)
+                            tint = TextSecondary,
+                            modifier = Modifier.size(19.dp)
                         )
                     }
 
@@ -156,8 +161,8 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.NetworkCheck,
                             contentDescription = "Ping All",
-                            tint = if (isPingingAll) AccentCyan else TextPrimary,
-                            modifier = Modifier.size(20.dp)
+                            tint = if (isPingingAll) PastelCyan else TextSecondary,
+                            modifier = Modifier.size(19.dp)
                         )
                     }
 
@@ -167,18 +172,20 @@ fun DashboardScreen(
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 contentDescription = "More",
-                                tint = TextPrimary,
-                                modifier = Modifier.size(20.dp)
+                                tint = TextSecondary,
+                                modifier = Modifier.size(19.dp)
                             )
                         }
 
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
-                            modifier = Modifier.background(DarkSurface)
+                            modifier = Modifier
+                                .background(SurfaceBg)
+                                .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Add Profile Manually", color = TextPrimary) },
+                                text = { Text("Add Profile Manually", color = TextPrimary, fontSize = 13.sp) },
                                 onClick = {
                                     showMenu = false
                                     profilesViewModel.startCreateProfile()
@@ -186,14 +193,14 @@ fun DashboardScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Live Logs", color = TextPrimary) },
+                                text = { Text("Live Logs", color = TextPrimary, fontSize = 13.sp) },
                                 onClick = {
                                     showMenu = false
                                     onNavigateToLogs()
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Engine Settings", color = TextPrimary) },
+                                text = { Text("Engine Settings", color = TextPrimary, fontSize = 13.sp) },
                                 onClick = {
                                     showMenu = false
                                     onNavigateToSettings()
@@ -211,12 +218,13 @@ fun DashboardScreen(
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Red square button with plus [+]
+                // New profile button
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(AccentCoral)
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CardBg)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
                         .clickable {
                             profilesViewModel.startCreateProfile()
                             onNavigateToEdit()
@@ -227,61 +235,47 @@ fun DashboardScreen(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add",
                         tint = TextPrimary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
-                // Group Pill: Default
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(if (selectedGroup == "Default") DarkTab else DarkCard)
-                        .border(1.dp, if (selectedGroup == "Default") AccentCyan.copy(alpha = 0.5f) else DarkBorder, RoundedCornerShape(16.dp))
-                        .clickable { selectedGroup = "Default" }
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Default",
-                        color = if (selectedGroup == "Default") AccentCyan else TextSecondary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                // Group Tab: Default
+                GroupTab(
+                    label = "DEFAULT",
+                    isSelected = selectedGroup == "Default",
+                    onClick = { selectedGroup = "Default" }
+                )
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
-                // Group Pill: Gaming
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(if (selectedGroup == "Gaming") DarkTab else DarkCard)
-                        .border(1.dp, if (selectedGroup == "Gaming") AccentCyan.copy(alpha = 0.5f) else DarkBorder, RoundedCornerShape(16.dp))
-                        .clickable { selectedGroup = "Gaming" }
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Gaming",
-                        color = if (selectedGroup == "Gaming") AccentCyan else TextSecondary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                // Group Tab: Gaming
+                GroupTab(
+                    label = "GAMING",
+                    isSelected = selectedGroup == "Gaming",
+                    onClick = { selectedGroup = "Gaming" }
+                )
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Real-time speed readout when connected
+                // Telemetry status badge
                 if (vpnState == VpnState.CONNECTED) {
-                    Text(
-                        text = "↓ ${trafficStats.formatDownloadSpeed()}",
-                        color = AccentGreen,
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(PastelGreenSubtle)
+                            .border(1.dp, PastelGreen.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "↓ ${trafficStats.formatDownloadSpeed()}",
+                            color = PastelGreen,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
 
@@ -311,18 +305,18 @@ fun DashboardScreen(
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(100.dp))
+                    Spacer(modifier = Modifier.height(90.dp))
                 }
             }
         }
 
-        // Floating Connection Controller
+        // Tactile Flat Connection Controller
         FloatingConnectionButton(
             state = vpnState,
             onClick = { dashboardViewModel.toggleConnection() },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 24.dp)
+                .padding(end = 16.dp, bottom = 20.dp)
         )
 
         // Import URI Dialog
@@ -343,6 +337,36 @@ fun DashboardScreen(
 }
 
 @Composable
+private fun GroupTab(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val bg = if (isSelected) CardSelectedBg else TabBg
+    val borderCol = if (isSelected) BorderStrong else BorderSubtle
+    val textCol = if (isSelected) TextPrimary else TextMuted
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(bg)
+            .border(1.dp, borderCol, RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = textCol,
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 0.5.sp
+        )
+    }
+}
+
+@Composable
 private fun ImportUriModal(
     onDismiss: () -> Unit,
     onImport: (String) -> Unit
@@ -352,13 +376,15 @@ private fun ImportUriModal(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DarkSurface,
+        containerColor = SurfaceBg,
+        shape = RoundedCornerShape(8.dp),
         title = {
             Text(
-                text = "Import Config",
+                text = "Import Configuration",
                 color = TextPrimary,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.2).sp
             )
         },
         text = {
@@ -373,15 +399,16 @@ private fun ImportUriModal(
                 OutlinedTextField(
                     value = rawText,
                     onValueChange = { rawText = it },
-                    placeholder = { Text("vless://...", color = TextMuted, fontSize = 12.sp) },
+                    placeholder = { Text("vless://...", color = TextMuted, fontSize = 12.sp, fontFamily = FontFamily.Monospace) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(100.dp),
+                    shape = RoundedCornerShape(6.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = DarkCard,
-                        unfocusedContainerColor = DarkCard,
-                        focusedBorderColor = AccentCoral,
-                        unfocusedBorderColor = DarkBorder,
+                        focusedContainerColor = CardBg,
+                        unfocusedContainerColor = CardBg,
+                        focusedBorderColor = BorderStrong,
+                        unfocusedBorderColor = BorderSubtle,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary
                     )
@@ -393,7 +420,9 @@ private fun ImportUriModal(
                     onClick = {
                         clipboardManager.getText()?.text?.let { rawText = it }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = DarkCard),
+                    colors = ButtonDefaults.buttonColors(containerColor = CardBg),
+                    shape = RoundedCornerShape(6.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(text = "Paste from Clipboard", color = TextPrimary, fontSize = 12.sp)
@@ -403,14 +432,15 @@ private fun ImportUriModal(
         confirmButton = {
             Button(
                 onClick = { onImport(rawText) },
-                colors = ButtonDefaults.buttonColors(containerColor = AccentCoral)
+                colors = ButtonDefaults.buttonColors(containerColor = ActionPrimaryBg),
+                shape = RoundedCornerShape(6.dp)
             ) {
-                Text(text = "Import", color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(text = "Import", color = CanvasBg, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = "Cancel", color = TextMuted)
+                Text(text = "Cancel", color = TextMuted, fontSize = 12.sp)
             }
         }
     )

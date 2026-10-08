@@ -2,24 +2,45 @@ package com.nyxtra.vpn.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Nyxtra Sleek Dark Theme Palette
-val DarkBackground = Color(0xFF14161B)
-val DarkSurface = Color(0xFF1A1D24)
-val DarkCard = Color(0xFF222630)
-val DarkBorder = Color(0xFF2E3340)
-val DarkCardSelected = Color(0xFF272C38)
-val DarkTab = Color(0xFF1B202B)
+// Minimalist Utilitarian Palette: Warm Charcoal Canvas + Crisp Structural Borders
+val CanvasBg = Color(0xFF101214)
+val SurfaceBg = Color(0xFF16191D)
+val CardBg = Color(0xFF1B1F24)
+val CardSelectedBg = Color(0xFF22272E)
+val BorderSubtle = Color(0xFF2B313A)
+val BorderStrong = Color(0xFF3D4450)
+val TabBg = Color(0xFF181B20)
 
-// Accents
-val AccentCoral = Color(0xFFFF4D4D)
-val AccentCyan = Color(0xFF00B0FF)
-val AccentGreen = Color(0xFF00E676)
-val AccentOrange = Color(0xFFFF9100)
-val AccentPurple = Color(0xFF7C4DFF)
+// Semantic Muted Pastels (No loud neon/gloss)
+val PastelRed = Color(0xFFE56A67)
+val PastelRedSubtle = Color(0xFF2A1B1C)
+val PastelGreen = Color(0xFF5ABF7E)
+val PastelGreenSubtle = Color(0xFF18291F)
+val PastelCyan = Color(0xFF59B2E6)
+val PastelCyanSubtle = Color(0xFF162734)
+val PastelOrange = Color(0xFFE29B52)
+val PastelOrangeSubtle = Color(0xFF2C2217)
 
-// Text Colors
-val TextPrimary = Color(0xFFF0F3F8)
-val TextSecondary = Color(0xFF9CA3AF)
-val TextMuted = Color(0xFF6B7280)
-val TextRed = Color(0xFFFF6B6B)
-val TextOnAccent = Color(0xFFFFFFFF)
+// Neutral Utilitarian Accents (Primary Action: Off-White / Pure Charcoal)
+val ActionPrimaryBg = Color(0xFFE6EDF3)
+val ActionPrimaryText = Color(0xFF101214)
+
+// High-Legibility Off-White & Charcoal Typography
+val TextPrimary = Color(0xFFEDF2F7)
+val TextSecondary = Color(0xFF8B949E)
+val TextMuted = Color(0xFF57606A)
+val TextRed = Color(0xFFE56A67)
+val TextOnAccent = Color(0xFF101214)
+
+// Backward compatibility mappings
+val DarkBackground = CanvasBg
+val DarkSurface = SurfaceBg
+val DarkCard = CardBg
+val DarkCardSelected = CardSelectedBg
+val DarkBorder = BorderSubtle
+val DarkTab = TabBg
+val AccentCoral = PastelRed
+val AccentCyan = PastelCyan
+val AccentGreen = PastelGreen
+val AccentOrange = PastelOrange
+val AccentPurple = Color(0xFF9E86E6)

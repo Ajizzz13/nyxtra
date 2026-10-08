@@ -14,10 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Info
@@ -37,9 +35,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.ui.navigation.Screen
-import com.nyxtra.vpn.ui.theme.AccentCoral
-import com.nyxtra.vpn.ui.theme.DarkBorder
-import com.nyxtra.vpn.ui.theme.DarkSurface
+import com.nyxtra.vpn.ui.theme.BorderSubtle
+import com.nyxtra.vpn.ui.theme.CardSelectedBg
+import com.nyxtra.vpn.ui.theme.SurfaceBg
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
@@ -52,62 +50,45 @@ fun NyxtraDrawer(
 ) {
     ModalDrawerSheet(
         modifier = modifier
-            .width(300.dp)
+            .width(280.dp)
             .fillMaxHeight(),
-        drawerContainerColor = DarkSurface
+        drawerContainerColor = SurfaceBg
     ) {
         Column(
             modifier = Modifier
                 .fillMaxHeight()
                 .statusBarsPadding()
-                .padding(vertical = 16.dp)
+                .padding(vertical = 20.dp)
         ) {
-            // Header
-            Row(
+            // Header: Clean workspace identity
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(AccentCoral)
-                        .border(1.dp, AccentCoral, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Bolt,
-                        contentDescription = null,
-                        tint = TextPrimary,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(14.dp))
-
-                Column {
-                    Text(
-                        text = "Nyxtra",
-                        color = TextPrimary,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Gaming Tunnel Client",
-                        color = TextSecondary,
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
+                Text(
+                    text = "Nyxtra",
+                    color = TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.4).sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "NETWORK PROTOCOL ENGINE",
+                    color = TextMuted,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 0.8.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Divider(color = DarkBorder, modifier = Modifier.padding(horizontal = 16.dp))
+            Divider(color = BorderSubtle, modifier = Modifier.padding(horizontal = 20.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Navigation Items
             DrawerItem(
@@ -140,28 +121,39 @@ fun NyxtraDrawer(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Divider(color = DarkBorder, modifier = Modifier.padding(horizontal = 16.dp))
+            Divider(color = BorderSubtle, modifier = Modifier.padding(horizontal = 20.dp))
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Footer
-            Row(
+            // Footer / Metadata
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 20.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    tint = TextMuted,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(text = "Nyxtra v1.0.0", color = TextSecondary, fontSize = 12.sp)
-                    Text(text = "Sing-box Core • Direct FD Handover", color = TextMuted, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = TextMuted,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "NYXTRA CORE 1.0.0",
+                        color = TextMuted,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        letterSpacing = 0.5.sp
+                    )
                 }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Sing-box • Direct FD Handover",
+                    color = TextMuted,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace
+                )
             }
         }
     }
@@ -174,32 +166,35 @@ private fun DrawerItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val bg = if (isSelected) AccentCoral.copy(alpha = 0.15f) else DarkSurface
-    val textCol = if (isSelected) AccentCoral else TextPrimary
-    val iconCol = if (isSelected) AccentCoral else TextSecondary
+    val bg = if (isSelected) CardSelectedBg else SurfaceBg
+    val textCol = if (isSelected) TextPrimary else TextSecondary
+    val iconCol = if (isSelected) TextPrimary else TextMuted
+    val borderMod = if (isSelected) Modifier.border(1.dp, BorderSubtle, RoundedCornerShape(6.dp)) else Modifier
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .padding(horizontal = 14.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(6.dp))
             .background(bg)
+            .then(borderMod)
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconCol,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = label,
                 color = textCol,
-                fontSize = 14.sp,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                fontSize = 13.sp,
+                fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                letterSpacing = (-0.1).sp
             )
         }
     }

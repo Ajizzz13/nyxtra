@@ -1,6 +1,7 @@
 package com.nyxtra.vpn.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,10 +29,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.AppInfo
-import com.nyxtra.vpn.ui.theme.AccentCoral
-import com.nyxtra.vpn.ui.theme.AccentGreen
-import com.nyxtra.vpn.ui.theme.DarkCard
-import com.nyxtra.vpn.ui.theme.DarkSurface
+import com.nyxtra.vpn.ui.theme.ActionPrimaryBg
+import com.nyxtra.vpn.ui.theme.BorderSubtle
+import com.nyxtra.vpn.ui.theme.CardBg
+import com.nyxtra.vpn.ui.theme.PastelGreen
+import com.nyxtra.vpn.ui.theme.PastelGreenSubtle
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
@@ -45,24 +47,26 @@ fun AppItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(6.dp))
+            .background(CardBg)
+            .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
             .clickable(onClick = onToggle)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // App icon badge
+        // App icon container
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(DarkCard),
+                .size(36.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(BorderSubtle.copy(alpha = 0.5f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = if (app.isGame) Icons.Default.SportsEsports else Icons.Default.Widgets,
                 contentDescription = null,
-                tint = if (app.isGame) AccentGreen else TextMuted,
-                modifier = Modifier.size(24.dp)
+                tint = if (app.isGame) PastelGreen else TextMuted,
+                modifier = Modifier.size(20.dp)
             )
         }
 
@@ -73,23 +77,24 @@ fun AppItemRow(
                 Text(
                     text = app.appName,
                     color = TextPrimary,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
                 )
                 if (app.isGame) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(AccentGreen.copy(alpha = 0.15f))
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(PastelGreenSubtle)
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
                     ) {
                         Text(
                             text = "GAME",
-                            color = AccentGreen,
+                            color = PastelGreen,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
                         )
                     }
                 }
@@ -108,8 +113,9 @@ fun AppItemRow(
             checked = app.isSelected,
             onCheckedChange = { onToggle() },
             colors = CheckboxDefaults.colors(
-                checkedColor = AccentCoral,
-                checkmarkColor = Color.White
+                checkedColor = ActionPrimaryBg,
+                checkmarkColor = Color(0xFF101214),
+                uncheckedColor = TextMuted
             )
         )
     }

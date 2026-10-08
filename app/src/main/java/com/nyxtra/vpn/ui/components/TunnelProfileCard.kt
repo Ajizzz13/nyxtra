@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
@@ -34,15 +34,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.TransportType
 import com.nyxtra.vpn.data.model.VpnProfile
-import com.nyxtra.vpn.ui.theme.AccentCoral
-import com.nyxtra.vpn.ui.theme.AccentGreen
-import com.nyxtra.vpn.ui.theme.AccentOrange
-import com.nyxtra.vpn.ui.theme.DarkBorder
-import com.nyxtra.vpn.ui.theme.DarkCard
-import com.nyxtra.vpn.ui.theme.DarkCardSelected
+import com.nyxtra.vpn.ui.theme.ActionPrimaryBg
+import com.nyxtra.vpn.ui.theme.BorderStrong
+import com.nyxtra.vpn.ui.theme.BorderSubtle
+import com.nyxtra.vpn.ui.theme.CardBg
+import com.nyxtra.vpn.ui.theme.CardSelectedBg
+import com.nyxtra.vpn.ui.theme.PastelGreen
+import com.nyxtra.vpn.ui.theme.PastelGreenSubtle
+import com.nyxtra.vpn.ui.theme.PastelOrange
+import com.nyxtra.vpn.ui.theme.PastelOrangeSubtle
+import com.nyxtra.vpn.ui.theme.PastelRed
+import com.nyxtra.vpn.ui.theme.PastelRedSubtle
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
-import com.nyxtra.vpn.ui.theme.TextRed
 import com.nyxtra.vpn.ui.theme.TextSecondary
 
 @Composable
@@ -56,15 +60,15 @@ fun TunnelProfileCard(
     modifier: Modifier = Modifier
 ) {
     val isSelected = profile.isSelected
-    val activeBorderColor = if (isSelected) AccentCoral.copy(alpha = 0.5f) else DarkBorder
-    val cardBackground = if (isSelected) DarkCardSelected else DarkCard
+    val borderColor = if (isSelected) BorderStrong else BorderSubtle
+    val cardBackground = if (isSelected) CardSelectedBg else CardBg
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(cardBackground)
-            .border(1.dp, activeBorderColor, RoundedCornerShape(12.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
             .clickable(onClick = onSelect)
     ) {
         Row(
@@ -72,12 +76,12 @@ fun TunnelProfileCard(
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
         ) {
-            // Left Indicator Strip
+            // Subtle selection edge
             Box(
                 modifier = Modifier
-                    .width(5.dp)
+                    .width(3.dp)
                     .fillMaxHeight()
-                    .background(if (isSelected) AccentCoral else Color.Transparent)
+                    .background(if (isSelected) ActionPrimaryBg else Color.Transparent)
             )
 
             // Card Body
@@ -86,7 +90,7 @@ fun TunnelProfileCard(
                     .weight(1f)
                     .padding(horizontal = 14.dp, vertical = 12.dp)
             ) {
-                // Top Row: Title + Ping
+                // Top Row: Title + Ping Badge
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -95,8 +99,9 @@ fun TunnelProfileCard(
                     Text(
                         text = profile.name,
                         color = TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = (-0.2).sp,
                         modifier = Modifier.weight(1f),
                         maxLines = 1
                     )
@@ -111,7 +116,7 @@ fun TunnelProfileCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Middle Row: Host Address + Actions (Share, Edit, Delete)
+                // Middle Row: Monospace endpoint + Action buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -126,50 +131,50 @@ fun TunnelProfileCard(
                     Text(
                         text = hostDisplay,
                         color = TextSecondary,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace,
+                        letterSpacing = (-0.2).sp,
                         modifier = Modifier.weight(1f),
                         maxLines = 1
                     )
 
-                    // Quick Action Icons
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         IconButton(
                             onClick = onShare,
-                            modifier = Modifier.size(30.dp)
+                            modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "Share",
                                 tint = TextMuted,
-                                modifier = Modifier.size(17.dp)
+                                modifier = Modifier.size(15.dp)
                             )
                         }
 
                         IconButton(
                             onClick = onEdit,
-                            modifier = Modifier.size(30.dp)
+                            modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
                                 contentDescription = "Edit",
                                 tint = TextMuted,
-                                modifier = Modifier.size(17.dp)
+                                modifier = Modifier.size(15.dp)
                             )
                         }
 
                         IconButton(
                             onClick = onDelete,
-                            modifier = Modifier.size(30.dp)
+                            modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
+                                imageVector = Icons.Default.DeleteOutline,
                                 contentDescription = "Delete",
                                 tint = TextMuted,
-                                modifier = Modifier.size(17.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
@@ -177,7 +182,7 @@ fun TunnelProfileCard(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Bottom Row: Protocol string, e.g. (VLESS + WS + TLS)
+                // Bottom Row: Clean technical tag
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
@@ -185,20 +190,28 @@ fun TunnelProfileCard(
                 ) {
                     val transportCode = when (profile.transport) {
                         TransportType.WS -> "WS"
-                        TransportType.HTTP_UPGRADE -> "HU"
+                        TransportType.HTTP_UPGRADE -> "HTTP-UPGRADE"
                         TransportType.GRPC -> "GRPC"
                         TransportType.TCP -> "TCP"
                     }
-                    val tlsCode = if (profile.isTls) " + TLS" else ""
-                    val protocolTag = "(${profile.protocol.displayName} + $transportCode$tlsCode)"
+                    val tlsCode = if (profile.isTls) " / TLS" else ""
+                    val protocolTag = "${profile.protocol.displayName} • $transportCode$tlsCode"
 
-                    Text(
-                        text = protocolTag,
-                        color = TextRed,
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(BorderSubtle.copy(alpha = 0.5f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = protocolTag.uppercase(),
+                            color = TextSecondary,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
                 }
             }
         }
@@ -210,28 +223,30 @@ fun TunnelPingBadge(
     pingMs: Long?,
     onClick: () -> Unit
 ) {
-    val (color, text) = when {
-        pingMs == null -> TextMuted to "ping"
-        pingMs < 0 -> AccentOrange to "timeout"
-        pingMs < 80 -> AccentGreen to "${pingMs}ms"
-        pingMs < 250 -> Color(0xFFC6FF00) to "${pingMs}ms"
-        else -> AccentOrange to "${pingMs}ms"
+    val (textColor, bgColor, text) = when {
+        pingMs == null -> Triple(TextMuted, BorderSubtle, "PING")
+        pingMs < 0 -> Triple(PastelRed, PastelRedSubtle, "TIMEOUT")
+        pingMs < 80 -> Triple(PastelGreen, PastelGreenSubtle, "${pingMs} MS")
+        pingMs < 250 -> Triple(PastelOrange, PastelOrangeSubtle, "${pingMs} MS")
+        else -> Triple(PastelRed, PastelRedSubtle, "${pingMs} MS")
     }
 
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(4.dp))
-            .background(color.copy(alpha = 0.14f))
+            .background(bgColor)
+            .border(1.dp, textColor.copy(alpha = 0.25f), RoundedCornerShape(4.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 6.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            color = color,
-            fontSize = 11.sp,
+            color = textColor,
+            fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.5.sp
         )
     }
 }
