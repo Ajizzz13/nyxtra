@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.VpnState
+import com.nyxtra.vpn.ui.components.BentoTelemetryWidget
 import com.nyxtra.vpn.ui.components.FloatingConnectionButton
 import com.nyxtra.vpn.ui.components.TunnelProfileCard
 import com.nyxtra.vpn.ui.screens.profiles.ProfilesViewModel
@@ -64,8 +65,6 @@ import com.nyxtra.vpn.ui.theme.CanvasBg
 import com.nyxtra.vpn.ui.theme.CardBg
 import com.nyxtra.vpn.ui.theme.CardSelectedBg
 import com.nyxtra.vpn.ui.theme.PastelCyan
-import com.nyxtra.vpn.ui.theme.PastelGreen
-import com.nyxtra.vpn.ui.theme.PastelGreenSubtle
 import com.nyxtra.vpn.ui.theme.SurfaceBg
 import com.nyxtra.vpn.ui.theme.TabBg
 import com.nyxtra.vpn.ui.theme.TextMuted
@@ -93,13 +92,15 @@ fun DashboardScreen(
     var showMenu by remember { mutableStateOf(false) }
     var selectedGroup by remember { mutableStateOf("Default") }
 
+    val selectedProfile = profiles.firstOrNull { it.isSelected } ?: profiles.firstOrNull()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(CanvasBg)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Editorial Top App Bar
+            // Editorial Technical App Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -125,9 +126,27 @@ fun DashboardScreen(
                         text = "Nyxtra",
                         color = TextPrimary,
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = (-0.3).sp
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.4).sp
                     )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(BorderSubtle)
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "CORE",
+                            color = TextSecondary,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -143,7 +162,7 @@ fun DashboardScreen(
 
                     // Scan QR button
                     IconButton(onClick = {
-                        Toast.makeText(context, "Scan QR: Point camera at config QR code", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "QR Scanner ready for camera feed", Toast.LENGTH_SHORT).show()
                     }) {
                         Icon(
                             imageVector = Icons.Default.QrCodeScanner,
@@ -171,7 +190,7 @@ fun DashboardScreen(
                         IconButton(onClick = { showMenu = true }) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More",
+                                contentDescription = "More Options",
                                 tint = TextSecondary,
                                 modifier = Modifier.size(19.dp)
                             )
@@ -211,14 +230,22 @@ fun DashboardScreen(
                 }
             }
 
-            // Sub-header Group Selector & Traffic
+            // High-Agency Bento Telemetry Display
+            BentoTelemetryWidget(
+                vpnState = vpnState,
+                trafficStats = trafficStats,
+                selectedProfile = selectedProfile,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+            )
+
+            // Group Selector & Add Action
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .padding(horizontal = 14.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // New profile button
+                // Quick create button
                 Box(
                     modifier = Modifier
                         .size(32.dp)
@@ -233,7 +260,7 @@ fun DashboardScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "Add",
+                        contentDescription = "Add Profile",
                         tint = TextPrimary,
                         modifier = Modifier.size(18.dp)
                     )
@@ -241,71 +268,103 @@ fun DashboardScreen(
 
                 Spacer(modifier = Modifier.width(10.dp))
 
-                // Group Tab: Default
+                // Group Tab: DEFAULT
                 GroupTab(
                     label = "DEFAULT",
+                    count = profiles.size,
                     isSelected = selectedGroup == "Default",
                     onClick = { selectedGroup = "Default" }
                 )
 
                 Spacer(modifier = Modifier.width(6.dp))
 
-                // Group Tab: Gaming
+                // Group Tab: GAMING
                 GroupTab(
                     label = "GAMING",
+                    count = null,
                     isSelected = selectedGroup == "Gaming",
                     onClick = { selectedGroup = "Gaming" }
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Telemetry status badge
-                if (vpnState == VpnState.CONNECTED) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(PastelGreenSubtle)
-                            .border(1.dp, PastelGreen.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "↓ ${trafficStats.formatDownloadSpeed()}",
-                            color = PastelGreen,
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
+                Text(
+                    text = "${profiles.size} NODES",
+                    color = TextMuted,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
             }
 
-            // Profile Cards List
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(profiles, key = { it.id }) { profile ->
-                    TunnelProfileCard(
-                        profile = profile,
-                        onSelect = { profilesViewModel.selectProfile(profile.id) },
-                        onPing = { profilesViewModel.pingProfile(profile.id) },
-                        onEdit = {
-                            profilesViewModel.startEditProfile(profile)
-                            onNavigateToEdit()
-                        },
-                        onDelete = { profilesViewModel.deleteProfile(profile.id) },
-                        onShare = {
-                            val uri = profilesViewModel.exportUri(profile)
-                            clipboardManager.setText(AnnotatedString(uri))
-                            Toast.makeText(context, "URI copied to clipboard", Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                }
+            Spacer(modifier = Modifier.height(6.dp))
 
-                item {
-                    Spacer(modifier = Modifier.height(90.dp))
+            // Profile Cards Feed or Empty State
+            if (profiles.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(CardBg)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "NO TUNNEL PROFILES FOUND",
+                            color = TextMuted,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Import a configuration URI to start low-latency tunneling",
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Button(
+                            onClick = { profilesViewModel.showImportDialog() },
+                            colors = ButtonDefaults.buttonColors(containerColor = ActionPrimaryBg),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(text = "Import URI", color = CanvasBg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(profiles, key = { it.id }) { profile ->
+                        TunnelProfileCard(
+                            profile = profile,
+                            onSelect = { profilesViewModel.selectProfile(profile.id) },
+                            onPing = { profilesViewModel.pingProfile(profile.id) },
+                            onEdit = {
+                                profilesViewModel.startEditProfile(profile)
+                                onNavigateToEdit()
+                            },
+                            onDelete = { profilesViewModel.deleteProfile(profile.id) },
+                            onShare = {
+                                val uri = profilesViewModel.exportUri(profile)
+                                clipboardManager.setText(AnnotatedString(uri))
+                                Toast.makeText(context, "URI copied to clipboard", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(96.dp))
+                    }
                 }
             }
         }
@@ -339,12 +398,15 @@ fun DashboardScreen(
 @Composable
 private fun GroupTab(
     label: String,
+    count: Int?,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
     val bg = if (isSelected) CardSelectedBg else TabBg
     val borderCol = if (isSelected) BorderStrong else BorderSubtle
     val textCol = if (isSelected) TextPrimary else TextMuted
+
+    val display = if (count != null) "$label [$count]" else label
 
     Box(
         modifier = Modifier
@@ -356,7 +418,7 @@ private fun GroupTab(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = label,
+            text = display,
             color = textCol,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,

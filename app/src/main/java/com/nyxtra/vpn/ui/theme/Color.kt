@@ -2,35 +2,35 @@ package com.nyxtra.vpn.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Minimalist Utilitarian Palette: Warm Charcoal Canvas + Crisp Structural Borders
-val CanvasBg = Color(0xFF101214)
-val SurfaceBg = Color(0xFF16191D)
-val CardBg = Color(0xFF1B1F24)
-val CardSelectedBg = Color(0xFF22272E)
-val BorderSubtle = Color(0xFF2B313A)
-val BorderStrong = Color(0xFF3D4450)
-val TabBg = Color(0xFF181B20)
+// High-Agency Utilitarian Palette: Warm Charcoal Canvas + Hairline Structural Borders
+val CanvasBg = Color(0xFF0D0F11)
+val SurfaceBg = Color(0xFF13161A)
+val CardBg = Color(0xFF181C21)
+val CardSelectedBg = Color(0xFF1E242C)
+val BorderSubtle = Color(0xFF262C36)
+val BorderStrong = Color(0xFF3A4452)
+val TabBg = Color(0xFF15181E)
 
-// Semantic Muted Pastels (No loud neon/gloss)
-val PastelRed = Color(0xFFE56A67)
-val PastelRedSubtle = Color(0xFF2A1B1C)
-val PastelGreen = Color(0xFF5ABF7E)
-val PastelGreenSubtle = Color(0xFF18291F)
-val PastelCyan = Color(0xFF59B2E6)
-val PastelCyanSubtle = Color(0xFF162734)
-val PastelOrange = Color(0xFFE29B52)
-val PastelOrangeSubtle = Color(0xFF2C2217)
+// Calibrated Semantic Accents (Desaturated, Saturation < 80%, No Neon)
+val PastelGreen = Color(0xFF4EBA77)
+val PastelGreenSubtle = Color(0xFF13251B)
+val PastelCyan = Color(0xFF4DA3D9)
+val PastelCyanSubtle = Color(0xFF12222E)
+val PastelRed = Color(0xFFDE5F5C)
+val PastelRedSubtle = Color(0xFF271717)
+val PastelOrange = Color(0xFFD69046)
+val PastelOrangeSubtle = Color(0xFF261D13)
 
-// Neutral Utilitarian Accents (Primary Action: Off-White / Pure Charcoal)
-val ActionPrimaryBg = Color(0xFFE6EDF3)
-val ActionPrimaryText = Color(0xFF101214)
+// High-Contrast Tactile Action Elements (Off-White to Pure Charcoal)
+val ActionPrimaryBg = Color(0xFFEDEDED)
+val ActionPrimaryText = Color(0xFF0D0F11)
 
-// High-Legibility Off-White & Charcoal Typography
+// Precision Typographic Hierarchy
 val TextPrimary = Color(0xFFEDF2F7)
 val TextSecondary = Color(0xFF8B949E)
-val TextMuted = Color(0xFF57606A)
-val TextRed = Color(0xFFE56A67)
-val TextOnAccent = Color(0xFF101214)
+val TextMuted = Color(0xFF545D68)
+val TextRed = Color(0xFFDE5F5C)
+val TextOnAccent = Color(0xFF0D0F11)
 
 // Backward compatibility mappings
 val DarkBackground = CanvasBg
@@ -43,4 +43,4 @@ val AccentCoral = PastelRed
 val AccentCyan = PastelCyan
 val AccentGreen = PastelGreen
 val AccentOrange = PastelOrange
-val AccentPurple = Color(0xFF9E86E6)
+val AccentPurple = Color(0xFF8F82C9)

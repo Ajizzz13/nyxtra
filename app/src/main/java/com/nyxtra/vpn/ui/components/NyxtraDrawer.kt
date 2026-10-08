@@ -70,12 +70,12 @@ fun NyxtraDrawer(
                     text = "Nyxtra",
                     color = TextPrimary,
                     fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.4).sp
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.5).sp
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = "NETWORK PROTOCOL ENGINE",
+                    text = "LOW-LATENCY NETWORK ENGINE",
                     color = TextMuted,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
@@ -86,7 +86,7 @@ fun NyxtraDrawer(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Divider(color = BorderSubtle, modifier = Modifier.padding(horizontal = 20.dp))
+            Divider(color = BorderSubtle, thickness = 1.dp, modifier = Modifier.padding(horizontal = 20.dp))
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -121,11 +121,11 @@ fun NyxtraDrawer(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Divider(color = BorderSubtle, modifier = Modifier.padding(horizontal = 20.dp))
+            Divider(color = BorderSubtle, thickness = 1.dp, modifier = Modifier.padding(horizontal = 20.dp))
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Footer / Metadata
+            // Footer / System Specs Metadata
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -140,16 +140,17 @@ fun NyxtraDrawer(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "NYXTRA CORE 1.0.0",
+                        text = "SING-BOX CORE 1.10.x",
                         color = TextMuted,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
-                        letterSpacing = 0.5.sp
+                        letterSpacing = 0.5.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Sing-box • Direct FD Handover",
+                    text = "Linux Direct FD • TCP_NODELAY",
                     color = TextMuted,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace

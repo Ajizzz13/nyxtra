@@ -13,25 +13,25 @@ object MockProfileRepository {
 
     private val initialProfiles = listOf(
         VpnProfile(
-            id = "sg-melbi-01",
-            name = "SG Melbikomas Gaming [Low Latency]",
+            id = "tyo-equinix-01",
+            name = "TYO · Equinix TY8 [Direct G-Core]",
             protocol = ProtocolType.VLESS,
-            serverAddress = "sg-node1.nyxtra.net",
+            serverAddress = "tyo-gw01.nyxtra.net",
             serverPort = 443,
             uuidOrPassword = "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
-            bugHost = "graph.facebook.com",
-            sni = "graph.facebook.com",
+            bugHost = "edge.valve.net",
+            sni = "edge.valve.net",
             path = "/nyxtra-vless-ws",
             transport = TransportType.WS,
             isTls = true,
-            pingMs = 28L,
+            pingMs = 24L,
             isSelected = true
         ),
         VpnProfile(
-            id = "id-biznet-02",
-            name = "ID Biznet Gio Gaming [Direct Route]",
+            id = "sin-equinix-02",
+            name = "SIN · Equinix SG1 [Low Jitter Valve]",
             protocol = ProtocolType.VMESS,
-            serverAddress = "id-gio.nyxtra.net",
+            serverAddress = "sg-edge02.nyxtra.net",
             serverPort = 443,
             uuidOrPassword = "f0e1d2c3-b4a5-6789-0123-456789abcdef",
             bugHost = "quiz.int.vidio.com",
@@ -39,14 +39,14 @@ object MockProfileRepository {
             path = "/nyxtra-vmess",
             transport = TransportType.HTTP_UPGRADE,
             isTls = true,
-            pingMs = 18L,
+            pingMs = 19L,
             isSelected = false
         ),
         VpnProfile(
-            id = "sg-trojan-03",
-            name = "SG DigitalOcean Trojan [HTTPUpgrade]",
+            id = "jkt-cyber-03",
+            name = "JKT · Cyber 1 DC [Direct Telkom/Indosat]",
             protocol = ProtocolType.TROJAN,
-            serverAddress = "sg-trojan.nyxtra.net",
+            serverAddress = "jkt-direct01.nyxtra.net",
             serverPort = 443,
             uuidOrPassword = "nyxtra_super_secret_trojan_pass",
             bugHost = "support.zoom.us",
@@ -54,7 +54,7 @@ object MockProfileRepository {
             path = "/trojan-upgrade",
             transport = TransportType.HTTP_UPGRADE,
             isTls = true,
-            pingMs = 35L,
+            pingMs = 12L,
             isSelected = false
         )
     )
@@ -100,7 +100,7 @@ object MockProfileRepository {
     }
 
     suspend fun pingProfile(id: String): Long {
-        val simulatedPing = Random.nextLong(15, 65)
+        val simulatedPing = Random.nextLong(12, 45)
         _profiles.update { list ->
             list.map {
                 if (it.id == id) it.copy(pingMs = simulatedPing) else it
@@ -112,7 +112,7 @@ object MockProfileRepository {
     suspend fun pingAll() {
         _profiles.update { list ->
             list.map {
-                it.copy(pingMs = Random.nextLong(15, 80))
+                it.copy(pingMs = Random.nextLong(12, 55))
             }
         }
     }

@@ -76,7 +76,7 @@ fun TunnelProfileCard(
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
         ) {
-            // Subtle selection edge
+            // Asymmetric selection indicator stripe
             Box(
                 modifier = Modifier
                     .width(3.dp)
@@ -100,7 +100,7 @@ fun TunnelProfileCard(
                         text = profile.name,
                         color = TextPrimary,
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.SemiBold,
                         letterSpacing = (-0.2).sp,
                         modifier = Modifier.weight(1f),
                         maxLines = 1
@@ -116,7 +116,7 @@ fun TunnelProfileCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Middle Row: Monospace endpoint + Action buttons
+                // Middle Row: Endpoint address + Action buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -182,7 +182,7 @@ fun TunnelProfileCard(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Bottom Row: Clean technical tag
+                // Bottom Row: Refined protocol specifications tag
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
@@ -194,7 +194,7 @@ fun TunnelProfileCard(
                         TransportType.GRPC -> "GRPC"
                         TransportType.TCP -> "TCP"
                     }
-                    val tlsCode = if (profile.isTls) " / TLS" else ""
+                    val tlsCode = if (profile.isTls) " // TLS" else ""
                     val protocolTag = "${profile.protocol.displayName} • $transportCode$tlsCode"
 
                     Box(
@@ -227,7 +227,7 @@ fun TunnelPingBadge(
         pingMs == null -> Triple(TextMuted, BorderSubtle, "PING")
         pingMs < 0 -> Triple(PastelRed, PastelRedSubtle, "TIMEOUT")
         pingMs < 80 -> Triple(PastelGreen, PastelGreenSubtle, "${pingMs} MS")
-        pingMs < 250 -> Triple(PastelOrange, PastelOrangeSubtle, "${pingMs} MS")
+        pingMs < 200 -> Triple(PastelOrange, PastelOrangeSubtle, "${pingMs} MS")
         else -> Triple(PastelRed, PastelRedSubtle, "${pingMs} MS")
     }
 
