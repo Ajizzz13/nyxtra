@@ -81,6 +81,7 @@ fun BentoTelemetryWidget(
         VpnState.CONNECTING -> Triple("LINKING FD INTERFACE...", PastelOrange, PastelOrangeSubtle)
         VpnState.DISCONNECTING -> Triple("TEARING DOWN TUN...", PastelOrange, PastelOrangeSubtle)
         VpnState.DISCONNECTED -> Triple("STANDBY // READY", TextMuted, BorderSubtle)
+        VpnState.ERROR -> Triple("TUNNEL ERROR // HALTED", PastelRed, PastelRedSubtle)
     }
 
     Box(
@@ -104,7 +105,7 @@ fun BentoTelemetryWidget(
                         modifier = Modifier.size(14.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (vpnState == VpnState.CONNECTED || vpnState == VpnState.CONNECTING) {
+                        if (vpnState == VpnState.CONNECTED || vpnState == VpnState.CONNECTING || vpnState == VpnState.ERROR) {
                             Box(
                                 modifier = Modifier
                                     .size(12.dp)
