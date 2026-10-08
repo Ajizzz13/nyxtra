@@ -49,15 +49,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.ProtocolType
 import com.nyxtra.vpn.data.model.TransportType
-import com.nyxtra.vpn.ui.theme.NyxtraBackground
-import com.nyxtra.vpn.ui.theme.NyxtraCard
-import com.nyxtra.vpn.ui.theme.NyxtraCardBorder
-import com.nyxtra.vpn.ui.theme.NyxtraCyberBlue
-import com.nyxtra.vpn.ui.theme.NyxtraNeonGreen
-import com.nyxtra.vpn.ui.theme.NyxtraSurface
-import com.nyxtra.vpn.ui.theme.NyxtraSurfaceVariant
+import com.nyxtra.vpn.ui.theme.AccentCoral
+import com.nyxtra.vpn.ui.theme.AccentCyan
+import com.nyxtra.vpn.ui.theme.DarkBackground
+import com.nyxtra.vpn.ui.theme.DarkBorder
+import com.nyxtra.vpn.ui.theme.DarkCard
+import com.nyxtra.vpn.ui.theme.DarkSurface
 import com.nyxtra.vpn.ui.theme.TextMuted
-import com.nyxtra.vpn.ui.theme.TextOnAccent
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
 
@@ -86,14 +84,15 @@ fun ProfileEditScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NyxtraBackground)
+            .background(DarkBackground)
     ) {
-        // Header
+        // App Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 8.dp, vertical = 10.dp),
+                .background(DarkSurface)
+                .padding(horizontal = 6.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onNavigateBack) {
@@ -103,11 +102,11 @@ fun ProfileEditScreen(
                     tint = TextPrimary
                 )
             }
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "PROFILE EDITOR",
+                text = "Edit Profile",
                 color = TextPrimary,
-                fontSize = 16.sp,
-                fontFamily = FontFamily.Monospace,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -117,9 +116,9 @@ fun ProfileEditScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Protocol Selector
+            // Protocol Tabs
             Text(
                 text = "PROTOCOL",
                 color = TextMuted,
@@ -137,10 +136,10 @@ fun ProfileEditScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) NyxtraNeonGreen.copy(alpha = 0.15f) else NyxtraSurface)
+                            .background(if (isSelected) AccentCoral.copy(alpha = 0.2f) else DarkCard)
                             .border(
                                 width = 1.dp,
-                                color = if (isSelected) NyxtraNeonGreen else NyxtraCardBorder,
+                                color = if (isSelected) AccentCoral else DarkBorder,
                                 shape = RoundedCornerShape(8.dp)
                             )
                             .clickable { protocol = proto }
@@ -149,7 +148,7 @@ fun ProfileEditScreen(
                     ) {
                         Text(
                             text = proto.displayName,
-                            color = if (isSelected) NyxtraNeonGreen else TextSecondary,
+                            color = if (isSelected) AccentCoral else TextSecondary,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -157,30 +156,30 @@ fun ProfileEditScreen(
                 }
             }
 
-            // Profile Name
-            EditorTextField(
-                label = "Profile Name",
+            // Name
+            EditInput(
+                label = "Remarks / Name",
                 value = name,
                 onValueChange = { name = it },
-                placeholder = "e.g. SG Melbikomas Gaming"
+                placeholder = "e.g. SG Melbikomas 01"
             )
 
-            // Server Address & Port
+            // Host & Port
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Box(modifier = Modifier.weight(2.5f)) {
-                    EditorTextField(
-                        label = "Server Host / IP",
+                    EditInput(
+                        label = "Server / Destination IP",
                         value = serverAddress,
                         onValueChange = { serverAddress = it },
-                        placeholder = "e.g. 104.21.5.12 or domain"
+                        placeholder = "104.18.41.141 or host"
                     )
                 }
 
                 Box(modifier = Modifier.weight(1f)) {
-                    EditorTextField(
+                    EditInput(
                         label = "Port",
                         value = serverPort.toString(),
                         onValueChange = { serverPort = it.toIntOrNull() ?: 443 },
@@ -190,33 +189,33 @@ fun ProfileEditScreen(
                 }
             }
 
-            // Bug Host (Injeksi Bug Host & SNI)
-            EditorTextField(
-                label = "Bug Host / Host Header",
+            // Bug Host (Injeksi Host Header)
+            EditInput(
+                label = "Bug Host (Custom Host / SNI)",
                 value = bugHost,
                 onValueChange = { bugHost = it },
-                placeholder = "e.g. graph.facebook.com or quiz.vidio.com"
+                placeholder = "e.g. quiz.vidio.com or graph.facebook.com"
             )
 
             // SNI
-            EditorTextField(
-                label = "Server Name Indication (SNI)",
+            EditInput(
+                label = "SNI (Server Name Indication)",
                 value = sni,
                 onValueChange = { sni = it },
-                placeholder = "Leave empty to use Bug Host"
+                placeholder = "Leave empty to fallback to Bug Host"
             )
 
-            // UUID or Password
-            EditorTextField(
+            // UUID / Password
+            EditInput(
                 label = if (protocol == ProtocolType.TROJAN) "Password" else "UUID",
                 value = uuidOrPassword,
                 onValueChange = { uuidOrPassword = it },
-                placeholder = "e.g. 3a7b-45..."
+                placeholder = "3a7b-..."
             )
 
             // Transport Selector
             Text(
-                text = "TRANSPORT NETWORK",
+                text = "TRANSPORT",
                 color = TextMuted,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
@@ -232,10 +231,10 @@ fun ProfileEditScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) NyxtraCyberBlue.copy(alpha = 0.15f) else NyxtraSurface)
+                            .background(if (isSelected) AccentCyan.copy(alpha = 0.15f) else DarkCard)
                             .border(
                                 width = 1.dp,
-                                color = if (isSelected) NyxtraCyberBlue else NyxtraCardBorder,
+                                color = if (isSelected) AccentCyan else DarkBorder,
                                 shape = RoundedCornerShape(8.dp)
                             )
                             .clickable { transport = trans }
@@ -244,7 +243,7 @@ fun ProfileEditScreen(
                     ) {
                         Text(
                             text = trans.displayName,
-                            color = if (isSelected) NyxtraCyberBlue else TextSecondary,
+                            color = if (isSelected) AccentCyan else TextSecondary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -253,69 +252,64 @@ fun ProfileEditScreen(
             }
 
             // Path
-            EditorTextField(
-                label = "WebSocket / HTTPUpgrade Path",
+            EditInput(
+                label = "Path",
                 value = path,
                 onValueChange = { path = it },
-                placeholder = "e.g. /ws or /vless"
+                placeholder = "/ws or /httpupgrade"
             )
 
-            // Security toggles
+            // TLS Switch
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(NyxtraCard)
-                    .border(1.dp, NyxtraCardBorder, RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(DarkCard)
+                    .border(1.dp, DarkBorder, RoundedCornerShape(8.dp))
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
-                    Text(text = "Enable TLS Encryption", color = TextPrimary, fontSize = 13.sp)
-                    Text(text = "Required for port 443 & SNI bug handshake", color = TextMuted, fontSize = 11.sp)
-                }
+                Text(text = "TLS Encryption", color = TextPrimary, fontSize = 14.sp)
                 Switch(
                     checked = isTls,
                     onCheckedChange = { isTls = it },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = NyxtraNeonGreen,
-                        checkedTrackColor = NyxtraNeonGreen.copy(alpha = 0.3f)
+                        checkedThumbColor = AccentCoral,
+                        checkedTrackColor = AccentCoral.copy(alpha = 0.3f)
                     )
                 )
             }
 
+            // Insecure Switch
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(NyxtraCard)
-                    .border(1.dp, NyxtraCardBorder, RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(DarkCard)
+                    .border(1.dp, DarkBorder, RoundedCornerShape(8.dp))
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
-                    Text(text = "Allow Insecure Certificates", color = TextPrimary, fontSize = 13.sp)
-                    Text(text = "Bypass self-signed SSL verification", color = TextMuted, fontSize = 11.sp)
-                }
+                Text(text = "Allow Insecure", color = TextPrimary, fontSize = 14.sp)
                 Switch(
                     checked = allowInsecure,
                     onCheckedChange = { allowInsecure = it },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = NyxtraCyberBlue,
-                        checkedTrackColor = NyxtraCyberBlue.copy(alpha = 0.3f)
+                        checkedThumbColor = AccentCyan,
+                        checkedTrackColor = AccentCyan.copy(alpha = 0.3f)
                     )
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Save Button
             Button(
                 onClick = {
                     if (name.isBlank() || serverAddress.isBlank() || uuidOrPassword.isBlank()) {
-                        Toast.makeText(context, "Name, Server, and UUID/Password cannot be empty!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Fill required fields!", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     val updated = profile.copy(
@@ -332,28 +326,18 @@ fun ProfileEditScreen(
                         allowInsecure = allowInsecure
                     )
                     viewModel.saveEditingProfile(updated)
-                    Toast.makeText(context, "Profile saved!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Saved!", Toast.LENGTH_SHORT).show()
                     onNavigateBack()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = NyxtraNeonGreen),
-                shape = RoundedCornerShape(10.dp)
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentCoral),
+                shape = RoundedCornerShape(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    tint = TextOnAccent
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "SAVE PROFILE CONFIG",
-                    color = TextOnAccent,
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
+                Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = TextPrimary)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = "SAVE CONFIG", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -362,7 +346,7 @@ fun ProfileEditScreen(
 }
 
 @Composable
-private fun EditorTextField(
+private fun EditInput(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
@@ -371,11 +355,10 @@ private fun EditorTextField(
 ) {
     Column {
         Text(
-            text = label.uppercase(),
+            text = label,
             color = TextMuted,
-            fontSize = 10.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 4.dp)
         )
         OutlinedTextField(
@@ -387,10 +370,10 @@ private fun EditorTextField(
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             shape = RoundedCornerShape(8.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = NyxtraSurface,
-                unfocusedContainerColor = NyxtraSurface,
-                focusedBorderColor = NyxtraNeonGreen,
-                unfocusedBorderColor = NyxtraCardBorder,
+                focusedContainerColor = DarkCard,
+                unfocusedContainerColor = DarkCard,
+                focusedBorderColor = AccentCoral,
+                unfocusedBorderColor = DarkBorder,
                 focusedTextColor = TextPrimary,
                 unfocusedTextColor = TextPrimary
             )

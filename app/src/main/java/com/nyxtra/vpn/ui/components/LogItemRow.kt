@@ -20,9 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.LogEntry
 import com.nyxtra.vpn.data.model.LogLevel
-import com.nyxtra.vpn.ui.theme.NyxtraAmber
-import com.nyxtra.vpn.ui.theme.NyxtraCrimson
-import com.nyxtra.vpn.ui.theme.NyxtraCyberBlue
+import com.nyxtra.vpn.ui.theme.AccentCoral
+import com.nyxtra.vpn.ui.theme.AccentCyan
+import com.nyxtra.vpn.ui.theme.AccentOrange
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 
@@ -33,9 +33,9 @@ fun LogItemRow(
 ) {
     val levelColor = when (entry.level) {
         LogLevel.DEBUG -> TextMuted
-        LogLevel.INFO -> NyxtraCyberBlue
-        LogLevel.WARN -> NyxtraAmber
-        LogLevel.ERROR -> NyxtraCrimson
+        LogLevel.INFO -> AccentCyan
+        LogLevel.WARN -> AccentOrange
+        LogLevel.ERROR -> AccentCoral
     }
 
     Row(

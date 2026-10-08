@@ -13,11 +13,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.Icon
@@ -38,22 +42,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.LogLevel
-import com.nyxtra.vpn.ui.components.CommonTopBar
 import com.nyxtra.vpn.ui.components.LogItemRow
-import com.nyxtra.vpn.ui.theme.NyxtraBackground
-import com.nyxtra.vpn.ui.theme.NyxtraCard
-import com.nyxtra.vpn.ui.theme.NyxtraCardBorder
-import com.nyxtra.vpn.ui.theme.NyxtraCyberBlue
-import com.nyxtra.vpn.ui.theme.NyxtraNeonGreen
-import com.nyxtra.vpn.ui.theme.NyxtraSurface
-import com.nyxtra.vpn.ui.theme.NyxtraSurfaceVariant
+import com.nyxtra.vpn.ui.theme.AccentCoral
+import com.nyxtra.vpn.ui.theme.DarkBackground
+import com.nyxtra.vpn.ui.theme.DarkBorder
+import com.nyxtra.vpn.ui.theme.DarkCard
+import com.nyxtra.vpn.ui.theme.DarkSurface
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
 
 @Composable
 fun LogsScreen(
-    viewModel: LogsViewModel
+    viewModel: LogsViewModel,
+    onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -63,7 +65,6 @@ fun LogsScreen(
 
     val listState = rememberLazyListState()
 
-    // Auto-scroll to bottom when logs are added
     LaunchedEffect(logs.size) {
         if (logs.isNotEmpty()) {
             listState.animateScrollToItem(logs.size - 1)
@@ -73,100 +74,79 @@ fun LogsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NyxtraBackground)
+            .background(DarkBackground)
     ) {
-        CommonTopBar(
-            title = "LIVE LOGS",
-            subtitle = "DIAGNOSTICS",
-            actions = {
-                // Copy all logs
-                IconButton(
-                    onClick = {
-                        val text = viewModel.getExportableText()
-                        clipboardManager.setText(AnnotatedString(text))
-                        Toast.makeText(context, "Logs copied to clipboard!", Toast.LENGTH_SHORT).show()
-                    }
-                ) {
+        // App Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .background(DarkSurface)
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onNavigateBack) {
                     Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy logs",
-                        tint = NyxtraCyberBlue
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = TextPrimary
                     )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Live Logs",
+                    color = TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = {
+                    val text = viewModel.getExportableText()
+                    clipboardManager.setText(AnnotatedString(text))
+                    Toast.makeText(context, "Logs copied!", Toast.LENGTH_SHORT).show()
+                }) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = TextPrimary, modifier = Modifier.size(20.dp))
                 }
 
-                // Clear logs
-                IconButton(
-                    onClick = { viewModel.clearLogs() }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DeleteSweep,
-                        contentDescription = "Clear logs",
-                        tint = TextMuted
-                    )
+                IconButton(onClick = { viewModel.clearLogs() }) {
+                    Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", tint = TextPrimary, modifier = Modifier.size(20.dp))
                 }
             }
-        )
+        }
 
         // Filter chips
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(horizontal = 14.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            LevelFilterChip(
-                label = "ALL",
-                isSelected = selectedLevel == null,
-                onClick = { viewModel.filterByLevel(null) },
-                modifier = Modifier.weight(1f)
-            )
-            LevelFilterChip(
-                label = "INFO",
-                isSelected = selectedLevel == LogLevel.INFO,
-                onClick = { viewModel.filterByLevel(LogLevel.INFO) },
-                modifier = Modifier.weight(1f)
-            )
-            LevelFilterChip(
-                label = "WARN",
-                isSelected = selectedLevel == LogLevel.WARN,
-                onClick = { viewModel.filterByLevel(LogLevel.WARN) },
-                modifier = Modifier.weight(1f)
-            )
-            LevelFilterChip(
-                label = "ERROR",
-                isSelected = selectedLevel == LogLevel.ERROR,
-                onClick = { viewModel.filterByLevel(LogLevel.ERROR) },
-                modifier = Modifier.weight(1f)
-            )
+            LogFilterChip("ALL", selectedLevel == null, { viewModel.filterByLevel(null) }, Modifier.weight(1f))
+            LogFilterChip("INFO", selectedLevel == LogLevel.INFO, { viewModel.filterByLevel(LogLevel.INFO) }, Modifier.weight(1f))
+            LogFilterChip("WARN", selectedLevel == LogLevel.WARN, { viewModel.filterByLevel(LogLevel.WARN) }, Modifier.weight(1f))
+            LogFilterChip("ERROR", selectedLevel == LogLevel.ERROR, { viewModel.filterByLevel(LogLevel.ERROR) }, Modifier.weight(1f))
         }
 
-        // Terminal Log Container
+        // Terminal view
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(NyxtraCard)
-                .border(1.dp, NyxtraCardBorder, RoundedCornerShape(12.dp))
-                .padding(12.dp)
+                .padding(horizontal = 14.dp, vertical = 6.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(DarkCard)
+                .border(1.dp, DarkBorder, RoundedCornerShape(10.dp))
+                .padding(10.dp)
         ) {
             if (logs.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No log events recorded yet.",
-                        color = TextMuted,
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = "Log buffer empty", color = TextMuted, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                 }
             } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                     items(logs) { entry ->
                         LogItemRow(entry = entry)
                     }
@@ -177,7 +157,7 @@ fun LogsScreen(
 }
 
 @Composable
-private fun LevelFilterChip(
+private fun LogFilterChip(
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
@@ -186,15 +166,15 @@ private fun LevelFilterChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(if (isSelected) NyxtraNeonGreen.copy(alpha = 0.15f) else NyxtraSurface)
-            .border(1.dp, if (isSelected) NyxtraNeonGreen else NyxtraCardBorder, RoundedCornerShape(6.dp))
+            .background(if (isSelected) AccentCoral.copy(alpha = 0.2f) else DarkCard)
+            .border(1.dp, if (isSelected) AccentCoral else DarkBorder, RoundedCornerShape(6.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
-            color = if (isSelected) NyxtraNeonGreen else TextSecondary,
+            color = if (isSelected) AccentCoral else TextSecondary,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold

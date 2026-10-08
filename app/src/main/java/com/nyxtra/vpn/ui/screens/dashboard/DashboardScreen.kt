@@ -1,5 +1,6 @@
 package com.nyxtra.vpn.ui.screens.dashboard
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,272 +14,404 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nyxtra.vpn.ui.components.BigConnectionButton
-import com.nyxtra.vpn.ui.components.CommonTopBar
-import com.nyxtra.vpn.ui.components.LatencyBadge
-import com.nyxtra.vpn.ui.components.SpeedMeterCard
-import com.nyxtra.vpn.ui.theme.NyxtraBackground
-import com.nyxtra.vpn.ui.theme.NyxtraCard
-import com.nyxtra.vpn.ui.theme.NyxtraCardBorder
-import com.nyxtra.vpn.ui.theme.NyxtraCyberBlue
-import com.nyxtra.vpn.ui.theme.NyxtraNeonGreen
-import com.nyxtra.vpn.ui.theme.NyxtraSurfaceVariant
+import com.nyxtra.vpn.data.model.VpnState
+import com.nyxtra.vpn.ui.components.FloatingConnectionButton
+import com.nyxtra.vpn.ui.components.TunnelProfileCard
+import com.nyxtra.vpn.ui.screens.profiles.ProfilesViewModel
+import com.nyxtra.vpn.ui.theme.AccentCoral
+import com.nyxtra.vpn.ui.theme.AccentCyan
+import com.nyxtra.vpn.ui.theme.AccentGreen
+import com.nyxtra.vpn.ui.theme.DarkBackground
+import com.nyxtra.vpn.ui.theme.DarkBorder
+import com.nyxtra.vpn.ui.theme.DarkCard
+import com.nyxtra.vpn.ui.theme.DarkSurface
+import com.nyxtra.vpn.ui.theme.DarkTab
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
 
 @Composable
 fun DashboardScreen(
-    viewModel: DashboardViewModel,
-    onNavigateToProfiles: () -> Unit
+    dashboardViewModel: DashboardViewModel,
+    profilesViewModel: ProfilesViewModel,
+    onOpenDrawer: () -> Unit,
+    onNavigateToEdit: () -> Unit,
+    onNavigateToLogs: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
-    val vpnState by viewModel.vpnState.collectAsState()
-    val trafficStats by viewModel.trafficStats.collectAsState()
-    val activeProfile by viewModel.activeProfile.collectAsState()
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
 
-    Column(
+    val vpnState by dashboardViewModel.vpnState.collectAsState()
+    val trafficStats by dashboardViewModel.trafficStats.collectAsState()
+    val profiles by profilesViewModel.filteredProfiles.collectAsState()
+    val isPingingAll by profilesViewModel.isPingingAll.collectAsState()
+    val importDialogVisible by profilesViewModel.importDialogVisible.collectAsState()
+
+    var showMenu by remember { mutableStateOf(false) }
+    var selectedGroup by remember { mutableStateOf("Default") }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NyxtraBackground)
+            .background(DarkBackground)
     ) {
-        CommonTopBar(
-            title = "NYXTRA",
-            subtitle = "GAMING CLIENT",
-            actions = {
-                // Low-Latency Engine HUD Pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(NyxtraNeonGreen.copy(alpha = 0.12f))
-                        .border(1.dp, NyxtraNeonGreen.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(NyxtraNeonGreen)
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Sleek Top App Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .background(DarkSurface)
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Drawer",
+                            tint = TextPrimary
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "LOW JITTER ENGINE",
-                            color = NyxtraNeonGreen,
-                            fontSize = 10.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    Text(
+                        text = "Nyxtra",
+                        color = TextPrimary,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Import URI / Add button
+                    IconButton(onClick = { profilesViewModel.showImportDialog() }) {
+                        Icon(
+                            imageVector = Icons.Default.ContentPaste,
+                            contentDescription = "Import URI",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(20.dp)
                         )
+                    }
+
+                    // Scan QR button
+                    IconButton(onClick = {
+                        Toast.makeText(context, "Scan QR: Point camera at config QR code", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = "Scan QR",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Ping all
+                    IconButton(
+                        onClick = { profilesViewModel.pingAll() },
+                        enabled = !isPingingAll
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.NetworkCheck,
+                            contentDescription = "Ping All",
+                            tint = if (isPingingAll) AccentCyan else TextPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Overflow Menu
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            modifier = Modifier.background(DarkSurface)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Add Profile Manually", color = TextPrimary) },
+                                onClick = {
+                                    showMenu = false
+                                    profilesViewModel.startCreateProfile()
+                                    onNavigateToEdit()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Live Logs", color = TextPrimary) },
+                                onClick = {
+                                    showMenu = false
+                                    onNavigateToLogs()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Engine Settings", color = TextPrimary) },
+                                onClick = {
+                                    showMenu = false
+                                    onNavigateToSettings()
+                                }
+                            )
+                        }
                     }
                 }
             }
-        )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Big Switch Connection Button
-            BigConnectionButton(
-                state = vpnState,
-                onClick = { viewModel.toggleConnection() }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Real-time Traffic Speed Meter
-            SpeedMeterCard(stats = trafficStats)
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Active Profile Card
-            Text(
-                text = "ACTIVE SERVER PROFILE",
-                color = TextMuted,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
+            // Sub-header Group Selector & Traffic
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 6.dp)
-            )
-
-            if (activeProfile != null) {
-                val profile = activeProfile!!
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Red square button with plus [+]
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(NyxtraCard)
-                        .border(1.dp, NyxtraCardBorder, RoundedCornerShape(12.dp))
-                        .clickable(onClick = onNavigateToProfiles)
-                        .padding(14.dp)
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(AccentCoral)
+                        .clickable {
+                            profilesViewModel.startCreateProfile()
+                            onNavigateToEdit()
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = profile.name,
-                                    color = TextPrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "${profile.protocol.displayName} • ${profile.transport.displayName} • Port ${profile.serverPort}",
-                                color = TextSecondary,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace
-                            )
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            LatencyBadge(
-                                pingMs = profile.pingMs,
-                                onClick = { viewModel.pingCurrentProfile() }
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = "Select profile",
-                                tint = TextMuted
-                            )
-                        }
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add",
+                        tint = TextPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
-            } else {
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Group Pill: Default
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(NyxtraCard)
-                        .border(1.dp, NyxtraCardBorder, RoundedCornerShape(12.dp))
-                        .clickable(onClick = onNavigateToProfiles)
-                        .padding(16.dp),
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (selectedGroup == "Default") DarkTab else DarkCard)
+                        .border(1.dp, if (selectedGroup == "Default") AccentCyan.copy(alpha = 0.5f) else DarkBorder, RoundedCornerShape(16.dp))
+                        .clickable { selectedGroup = "Default" }
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No profile selected. Tap to add or select profile.",
-                        color = NyxtraCyberBlue,
-                        fontSize = 13.sp
+                        text = "Default",
+                        color = if (selectedGroup == "Default") AccentCyan else TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Group Pill: Gaming
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (selectedGroup == "Gaming") DarkTab else DarkCard)
+                        .border(1.dp, if (selectedGroup == "Gaming") AccentCyan.copy(alpha = 0.5f) else DarkBorder, RoundedCornerShape(16.dp))
+                        .clickable { selectedGroup = "Gaming" }
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Gaming",
+                        color = if (selectedGroup == "Gaming") AccentCyan else TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Real-time speed readout when connected
+                if (vpnState == VpnState.CONNECTED) {
+                    Text(
+                        text = "↓ ${trafficStats.formatDownloadSpeed()}",
+                        color = AccentGreen,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Gaming Low-Latency Engine Summary Grid
-            Text(
-                text = "ENGINE SPECIFICATION (PRD ALIGNED)",
-                color = TextMuted,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
+            // Profile Cards List
+            LazyColumn(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                EnginePill(
-                    icon = Icons.Default.FlashOn,
-                    label = "DIRECT FD",
-                    value = "Zero Loopback",
-                    modifier = Modifier.weight(1f)
-                )
-                EnginePill(
-                    icon = Icons.Default.Speed,
-                    label = "MTU 1280",
-                    value = "No BTS Drop",
-                    modifier = Modifier.weight(1f)
-                )
-                EnginePill(
-                    icon = Icons.Default.Dns,
-                    label = "TUN STACK",
-                    value = "Kernel System",
-                    modifier = Modifier.weight(1f)
-                )
-            }
+                items(profiles, key = { it.id }) { profile ->
+                    TunnelProfileCard(
+                        profile = profile,
+                        onSelect = { profilesViewModel.selectProfile(profile.id) },
+                        onPing = { profilesViewModel.pingProfile(profile.id) },
+                        onEdit = {
+                            profilesViewModel.startEditProfile(profile)
+                            onNavigateToEdit()
+                        },
+                        onDelete = { profilesViewModel.deleteProfile(profile.id) },
+                        onShare = {
+                            val uri = profilesViewModel.exportUri(profile)
+                            clipboardManager.setText(AnnotatedString(uri))
+                            Toast.makeText(context, "URI copied to clipboard", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                item {
+                    Spacer(modifier = Modifier.height(100.dp))
+                }
+            }
+        }
+
+        // Floating Connection Controller
+        FloatingConnectionButton(
+            state = vpnState,
+            onClick = { dashboardViewModel.toggleConnection() },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 20.dp, bottom = 24.dp)
+        )
+
+        // Import URI Dialog
+        if (importDialogVisible) {
+            ImportUriModal(
+                onDismiss = { profilesViewModel.hideImportDialog() },
+                onImport = { rawUri ->
+                    val ok = profilesViewModel.importUri(rawUri)
+                    if (ok) {
+                        Toast.makeText(context, "Profile imported!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Invalid URI (vless, vmess, trojan)", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
         }
     }
 }
 
 @Composable
-private fun EnginePill(
-    icon: ImageVector,
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
+private fun ImportUriModal(
+    onDismiss: () -> Unit,
+    onImport: (String) -> Unit
 ) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(NyxtraSurfaceVariant)
-            .border(1.dp, NyxtraCardBorder, RoundedCornerShape(10.dp))
-            .padding(10.dp)
-    ) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = NyxtraNeonGreen,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = label,
-                    color = NyxtraNeonGreen,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
+    var rawText by remember { mutableStateOf("") }
+    val clipboardManager = LocalClipboardManager.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        title = {
             Text(
-                text = value,
-                color = TextSecondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Normal
+                text = "Import Config",
+                color = TextPrimary,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold
             )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Paste vless://, vmess://, or trojan:// URI:",
+                    color = TextSecondary,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
+
+                OutlinedTextField(
+                    value = rawText,
+                    onValueChange = { rawText = it },
+                    placeholder = { Text("vless://...", color = TextMuted, fontSize = 12.sp) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = DarkCard,
+                        unfocusedContainerColor = DarkCard,
+                        focusedBorderColor = AccentCoral,
+                        unfocusedBorderColor = DarkBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(
+                    onClick = {
+                        clipboardManager.getText()?.text?.let { rawText = it }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkCard),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Paste from Clipboard", color = TextPrimary, fontSize = 12.sp)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onImport(rawText) },
+                colors = ButtonDefaults.buttonColors(containerColor = AccentCoral)
+            ) {
+                Text(text = "Import", color = TextPrimary, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "Cancel", color = TextMuted)
+            }
         }
-    }
+    )
 }

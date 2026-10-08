@@ -2,25 +2,24 @@ package com.nyxtra.vpn.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Nyxtra Gamer / Cyber Dark Palette
-val NyxtraBackground = Color(0xFF080C14)
-val NyxtraSurface = Color(0xFF101726)
-val NyxtraSurfaceVariant = Color(0xFF182238)
-val NyxtraCard = Color(0xFF131D2F)
-val NyxtraCardBorder = Color(0xFF22314E)
+// Nyxtra Sleek Dark Theme Palette
+val DarkBackground = Color(0xFF14161B)
+val DarkSurface = Color(0xFF1A1D24)
+val DarkCard = Color(0xFF222630)
+val DarkBorder = Color(0xFF2E3340)
+val DarkCardSelected = Color(0xFF272C38)
+val DarkTab = Color(0xFF1B202B)
 
-// Status & Accents
-val NyxtraNeonGreen = Color(0xFF00E676)
-val NyxtraGreenGlow = Color(0x3300E676)
-val NyxtraCyberBlue = Color(0xFF00B0FF)
-val NyxtraBlueGlow = Color(0x3300B0FF)
-val NyxtraCrimson = Color(0xFFFF3366)
-val NyxtraCrimsonGlow = Color(0x33FF3366)
-val NyxtraAmber = Color(0xFFFFB300)
-val NyxtraPurple = Color(0xFF7C4DFF)
+// Accents
+val AccentCoral = Color(0xFFFF4D4D)
+val AccentCyan = Color(0xFF00B0FF)
+val AccentGreen = Color(0xFF00E676)
+val AccentOrange = Color(0xFFFF9100)
+val AccentPurple = Color(0xFF7C4DFF)
 
 // Text Colors
-val TextPrimary = Color(0xFFF8FAFC)
-val TextSecondary = Color(0xFF94A3B8)
-val TextMuted = Color(0xFF64748B)
-val TextOnAccent = Color(0xFF080C14)
+val TextPrimary = Color(0xFFF0F3F8)
+val TextSecondary = Color(0xFF9CA3AF)
+val TextMuted = Color(0xFF6B7280)
+val TextRed = Color(0xFFFF6B6B)
+val TextOnAccent = Color(0xFFFFFFFF)

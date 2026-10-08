@@ -8,7 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.nyxtra.vpn.ui.navigation.AppNavigation
-import com.nyxtra.vpn.ui.theme.NyxtraBackground
+import com.nyxtra.vpn.ui.theme.DarkBackground
 import com.nyxtra.vpn.ui.theme.NyxtraTheme
 
 class MainActivity : ComponentActivity() {
@@ -18,7 +18,7 @@ class MainActivity : ComponentActivity() {
             NyxtraTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = NyxtraBackground
+                    color = DarkBackground
                 ) {
                     AppNavigation()
                 }

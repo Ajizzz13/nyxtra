@@ -28,9 +28,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.AppInfo
-import com.nyxtra.vpn.ui.theme.NyxtraCard
-import com.nyxtra.vpn.ui.theme.NyxtraNeonGreen
-import com.nyxtra.vpn.ui.theme.NyxtraSurfaceVariant
+import com.nyxtra.vpn.ui.theme.AccentCoral
+import com.nyxtra.vpn.ui.theme.AccentGreen
+import com.nyxtra.vpn.ui.theme.DarkCard
+import com.nyxtra.vpn.ui.theme.DarkSurface
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
@@ -54,13 +55,13 @@ fun AppItemRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(NyxtraSurfaceVariant),
+                .background(DarkCard),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = if (app.isGame) Icons.Default.SportsEsports else Icons.Default.Widgets,
                 contentDescription = null,
-                tint = if (app.isGame) NyxtraNeonGreen else TextMuted,
+                tint = if (app.isGame) AccentGreen else TextMuted,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -80,12 +81,12 @@ fun AppItemRow(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(NyxtraNeonGreen.copy(alpha = 0.15f))
+                            .background(AccentGreen.copy(alpha = 0.15f))
                             .padding(horizontal = 4.dp, vertical = 1.dp)
                     ) {
                         Text(
                             text = "GAME",
-                            color = NyxtraNeonGreen,
+                            color = AccentGreen,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
@@ -107,8 +108,8 @@ fun AppItemRow(
             checked = app.isSelected,
             onCheckedChange = { onToggle() },
             colors = CheckboxDefaults.colors(
-                checkedColor = NyxtraNeonGreen,
-                checkmarkColor = Color(0xFF080C14)
+                checkedColor = AccentCoral,
+                checkmarkColor = Color.White
             )
         )
     }

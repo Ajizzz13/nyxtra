@@ -1,32 +1,21 @@
 package com.nyxtra.vpn.ui.navigation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.nyxtra.vpn.ui.components.NyxtraDrawer
 import com.nyxtra.vpn.ui.screens.dashboard.DashboardScreen
 import com.nyxtra.vpn.ui.screens.dashboard.DashboardViewModel
 import com.nyxtra.vpn.ui.screens.logs.LogsScreen
@@ -34,15 +23,11 @@ import com.nyxtra.vpn.ui.screens.logs.LogsViewModel
 import com.nyxtra.vpn.ui.screens.perapp.PerAppProxyScreen
 import com.nyxtra.vpn.ui.screens.perapp.PerAppProxyViewModel
 import com.nyxtra.vpn.ui.screens.profiles.ProfileEditScreen
-import com.nyxtra.vpn.ui.screens.profiles.ProfilesScreen
 import com.nyxtra.vpn.ui.screens.profiles.ProfilesViewModel
 import com.nyxtra.vpn.ui.screens.settings.SettingsScreen
 import com.nyxtra.vpn.ui.screens.settings.SettingsViewModel
-import com.nyxtra.vpn.ui.theme.NyxtraBackground
-import com.nyxtra.vpn.ui.theme.NyxtraCardBorder
-import com.nyxtra.vpn.ui.theme.NyxtraNeonGreen
-import com.nyxtra.vpn.ui.theme.NyxtraSurface
-import com.nyxtra.vpn.ui.theme.TextMuted
+import com.nyxtra.vpn.ui.theme.DarkBackground
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation(
@@ -51,92 +36,52 @@ fun AppNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Shared ViewModels across screens
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    // Shared ViewModels
     val dashboardViewModel: DashboardViewModel = viewModel()
     val profilesViewModel: ProfilesViewModel = viewModel()
     val perAppViewModel: PerAppProxyViewModel = viewModel()
     val logsViewModel: LogsViewModel = viewModel()
     val settingsViewModel: SettingsViewModel = viewModel()
 
-    val showBottomBar = currentRoute in Screen.bottomNavItems.map { it.route }
-
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(NyxtraBackground),
-        containerColor = NyxtraBackground,
-        bottomBar = {
-            if (showBottomBar) {
-                NavigationBar(
-                    modifier = Modifier
-                        .navigationBarsPadding()
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                        .border(1.dp, NyxtraCardBorder, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                    containerColor = NyxtraSurface,
-                    tonalElevation = 0.dp
-                ) {
-                    Screen.bottomNavItems.forEach { screen ->
-                        val isSelected = currentRoute == screen.route
-                        NavigationBarItem(
-                            selected = isSelected,
-                            onClick = {
-                                if (currentRoute != screen.route) {
-                                    navController.navigate(screen.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            },
-                            icon = {
-                                screen.icon?.let { icon ->
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = screen.title,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            },
-                            label = {
-                                Text(
-                                    text = screen.title,
-                                    fontSize = 10.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = NyxtraNeonGreen,
-                                selectedTextColor = NyxtraNeonGreen,
-                                unselectedIconColor = TextMuted,
-                                unselectedTextColor = TextMuted,
-                                indicatorColor = NyxtraNeonGreen.copy(alpha = 0.12f)
-                            )
-                        )
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            NyxtraDrawer(
+                currentRoute = currentRoute,
+                onNavigate = { route ->
+                    scope.launch { drawerState.close() }
+                    if (currentRoute != route) {
+                        navController.navigate(route) {
+                            popUpTo(Screen.Dashboard.route) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 }
-            }
+            )
         }
-    ) { innerPadding ->
+    ) {
         NavHost(
             navController = navController,
             startDestination = Screen.Dashboard.route,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .background(DarkBackground)
         ) {
+            // Main Dashboard (Profile list + Floating Connect Button)
             composable(Screen.Dashboard.route) {
                 DashboardScreen(
-                    viewModel = dashboardViewModel,
-                    onNavigateToProfiles = { navController.navigate(Screen.Profiles.route) }
-                )
-            }
-
-            composable(Screen.Profiles.route) {
-                ProfilesScreen(
-                    viewModel = profilesViewModel,
-                    onNavigateToEdit = { navController.navigate(Screen.ProfileEdit.route) }
+                    dashboardViewModel = dashboardViewModel,
+                    profilesViewModel = profilesViewModel,
+                    onOpenDrawer = { scope.launch { drawerState.open() } },
+                    onNavigateToEdit = { navController.navigate(Screen.ProfileEdit.route) },
+                    onNavigateToLogs = { navController.navigate(Screen.Logs.route) },
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
                 )
             }
 
@@ -148,15 +93,24 @@ fun AppNavigation(
             }
 
             composable(Screen.PerApp.route) {
-                PerAppProxyScreen(viewModel = perAppViewModel)
+                PerAppProxyScreen(
+                    viewModel = perAppViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
 
             composable(Screen.Logs.route) {
-                LogsScreen(viewModel = logsViewModel)
+                LogsScreen(
+                    viewModel = logsViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
 
             composable(Screen.Settings.route) {
-                SettingsScreen(viewModel = settingsViewModel)
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
         }
     }

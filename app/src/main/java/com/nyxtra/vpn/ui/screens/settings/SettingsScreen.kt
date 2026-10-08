@@ -13,16 +13,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -40,22 +43,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.TunStackMode
-import com.nyxtra.vpn.ui.components.CommonTopBar
-import com.nyxtra.vpn.ui.theme.NyxtraBackground
-import com.nyxtra.vpn.ui.theme.NyxtraCard
-import com.nyxtra.vpn.ui.theme.NyxtraCardBorder
-import com.nyxtra.vpn.ui.theme.NyxtraCyberBlue
-import com.nyxtra.vpn.ui.theme.NyxtraNeonGreen
-import com.nyxtra.vpn.ui.theme.NyxtraSurface
-import com.nyxtra.vpn.ui.theme.NyxtraSurfaceVariant
+import com.nyxtra.vpn.ui.theme.AccentCoral
+import com.nyxtra.vpn.ui.theme.AccentCyan
+import com.nyxtra.vpn.ui.theme.DarkBackground
+import com.nyxtra.vpn.ui.theme.DarkBorder
+import com.nyxtra.vpn.ui.theme.DarkCard
+import com.nyxtra.vpn.ui.theme.DarkSurface
 import com.nyxtra.vpn.ui.theme.TextMuted
-import com.nyxtra.vpn.ui.theme.TextOnAccent
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
 
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel
+    viewModel: SettingsViewModel,
+    onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
     val config by viewModel.config.collectAsState()
@@ -63,63 +64,57 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NyxtraBackground)
+            .background(DarkBackground)
     ) {
-        CommonTopBar(
-            title = "LOW-LATENCY ENGINE",
-            subtitle = "TUNING"
-        )
+        // App Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .background(DarkSurface)
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = TextPrimary
+                )
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "Engine Settings",
+                color = TextPrimary,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Engine Header note
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(NyxtraNeonGreen.copy(alpha = 0.08f))
-                    .border(1.dp, NyxtraNeonGreen.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                    .padding(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.Top) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = NyxtraNeonGreen,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Engine parameters are fine-tuned according to PRD section 5 to eradicate jitter in mobile games (Free Fire, MLBB, PUBG).",
-                        color = TextPrimary,
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp
-                    )
-                }
-            }
-
-            // Direct FD Handover (Read only / enforced on)
-            EngineSwitchCard(
+            // Direct FD
+            SettingsToggleCard(
                 title = "Direct FD Handover",
-                description = "File Descriptor passing from VpnService directly to Sing-box Core without 127.0.0.1 proxy overhead.",
+                desc = "Pass TUN file descriptor directly to Sing-box Core (No 127.0.0.1 proxy)",
                 checked = config.directFdHandover,
                 enabled = false,
                 onCheckedChange = {}
             )
 
-            // MTU Customizer
+            // MTU
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(NyxtraCard)
-                    .border(1.dp, NyxtraCardBorder, RoundedCornerShape(12.dp))
-                    .padding(16.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(DarkCard)
+                    .border(1.dp, DarkBorder, RoundedCornerShape(10.dp))
+                    .padding(14.dp)
             ) {
                 Column {
                     Row(
@@ -128,29 +123,13 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(
-                                text = "Virtual Interface MTU",
-                                color = TextPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "Clamped range 1280 - 1340 bytes to prevent BTS fragmentation",
-                                color = TextMuted,
-                                fontSize = 11.sp
-                            )
+                            Text(text = "Virtual Interface MTU", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            Text(text = "Clamped (1280 - 1340) to prevent packet drop", color = TextMuted, fontSize = 11.sp)
                         }
-
-                        Text(
-                            text = "${config.mtu} B",
-                            color = NyxtraNeonGreen,
-                            fontSize = 16.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text(text = "${config.mtu}", color = AccentCoral, fontSize = 16.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Slider(
                         value = config.mtu.toFloat(),
@@ -158,53 +137,40 @@ fun SettingsScreen(
                         valueRange = 1280f..1340f,
                         steps = 6,
                         colors = SliderDefaults.colors(
-                            thumbColor = NyxtraNeonGreen,
-                            activeTrackColor = NyxtraNeonGreen,
-                            inactiveTrackColor = NyxtraSurfaceVariant
+                            thumbColor = AccentCoral,
+                            activeTrackColor = AccentCoral,
+                            inactiveTrackColor = DarkBorder
                         )
                     )
                 }
             }
 
-            // Stack TUN Mode Selection
+            // TUN Stack
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(NyxtraCard)
-                    .border(1.dp, NyxtraCardBorder, RoundedCornerShape(12.dp))
-                    .padding(16.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(DarkCard)
+                    .border(1.dp, DarkBorder, RoundedCornerShape(10.dp))
+                    .padding(14.dp)
             ) {
                 Column {
-                    Text(
-                        text = "TUN Stack Architecture",
-                        color = TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "System kernel mode bypasses userspace gVisor memory copies",
-                        color = TextMuted,
-                        fontSize = 11.sp
-                    )
+                    Text(text = "TUN Stack Mode", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text(text = "System kernel mode reduces userspace memory copy latency", color = TextMuted, fontSize = 11.sp)
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         TunStackMode.values().forEach { mode ->
                             val isSelected = config.tunStack == mode
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSelected) NyxtraCyberBlue.copy(alpha = 0.15f) else NyxtraSurface)
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (isSelected) NyxtraCyberBlue else NyxtraCardBorder,
-                                        shape = RoundedCornerShape(8.dp)
-                                    )
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isSelected) AccentCyan.copy(alpha = 0.15f) else DarkSurface)
+                                    .border(1.dp, if (isSelected) AccentCyan else DarkBorder, RoundedCornerShape(6.dp))
                                     .clickable { viewModel.updateTunStack(mode) }
-                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -213,18 +179,12 @@ fun SettingsScreen(
                                 ) {
                                     Text(
                                         text = mode.displayName,
-                                        color = if (isSelected) NyxtraCyberBlue else TextSecondary,
+                                        color = if (isSelected) AccentCyan else TextSecondary,
                                         fontSize = 12.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
                                     if (isSelected) {
-                                        Text(
-                                            text = "ACTIVE",
-                                            color = NyxtraCyberBlue,
-                                            fontSize = 10.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        Text(text = "ACTIVE", color = AccentCyan, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -233,79 +193,50 @@ fun SettingsScreen(
                 }
             }
 
-            // Zero Routing & Zero Sniffing (Game Mode)
-            EngineSwitchCard(
+            // Zero Routing & Zero Sniffing
+            SettingsToggleCard(
                 title = "Zero Routing & Zero Sniffing",
-                description = "Completely disable domain sniffing and regex rule processing to eliminate packet delay.",
+                desc = "Disable domain sniffing & regex rules for ultra low latency gaming",
                 checked = config.zeroRoutingSniffing,
                 enabled = true,
                 onCheckedChange = { viewModel.toggleZeroRouting(it) }
             )
 
-            // TCP NoDelay & Aggressive Keepalive
-            EngineSwitchCard(
-                title = "TCP NoDelay & Modem High-Power",
-                description = "Force socket outbound TCP_NODELAY and aggressive keepalives to prevent modem idle throttling.",
+            // TCP NoDelay
+            SettingsToggleCard(
+                title = "TCP NoDelay & Keepalive",
+                desc = "Aggressive socket transmission to prevent modem sleep jitter",
                 checked = config.tcpNoDelay,
                 enabled = true,
                 onCheckedChange = { viewModel.toggleTcpNoDelay(it) }
             )
 
-            // Build Variant & App Info
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(NyxtraCard)
-                    .border(1.dp, NyxtraCardBorder, RoundedCornerShape(12.dp))
-                    .padding(16.dp)
-            ) {
-                Column {
-                    Text(
-                        text = "BUILD DISTRIBUTION (PRD SPEC)",
-                        color = TextMuted,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "• Modern Variant (arm64-v8a): Target Android 9.0+ (API 28+)\n• Legacy Variant (armeabi-v7a & arm64): Target Android 5.0+ (API 21+)",
-                        color = TextSecondary,
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Reset Button
             Button(
                 onClick = {
                     viewModel.resetToDefaults()
-                    Toast.makeText(context, "Engine reset to PRD gaming defaults", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Reset to gaming defaults!", Toast.LENGTH_SHORT).show()
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = NyxtraSurfaceVariant),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
+                colors = ButtonDefaults.buttonColors(containerColor = DarkCard),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = Icons.Default.RestartAlt,
-                    contentDescription = null,
-                    tint = TextMuted
-                )
+                Icon(imageVector = Icons.Default.RestartAlt, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "Reset Engine Defaults", color = TextPrimary, fontSize = 12.sp)
+                Text(text = "Reset Defaults", color = TextPrimary, fontSize = 13.sp)
             }
 
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
 @Composable
-private fun EngineSwitchCard(
+private fun SettingsToggleCard(
     title: String,
-    description: String,
+    desc: String,
     checked: Boolean,
     enabled: Boolean,
     onCheckedChange: (Boolean) -> Unit
@@ -313,40 +244,30 @@ private fun EngineSwitchCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(NyxtraCard)
-            .border(1.dp, NyxtraCardBorder, RoundedCornerShape(12.dp))
-            .padding(16.dp),
+            .clip(RoundedCornerShape(10.dp))
+            .background(DarkCard)
+            .border(1.dp, DarkBorder, RoundedCornerShape(10.dp))
+            .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = TextPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            Text(text = title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = description,
-                color = TextMuted,
-                fontSize = 11.sp,
-                lineHeight = 15.sp
-            )
+            Text(text = desc, color = TextMuted, fontSize = 11.sp)
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
         Switch(
             checked = checked,
             enabled = enabled,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = NyxtraNeonGreen,
-                checkedTrackColor = NyxtraNeonGreen.copy(alpha = 0.3f),
-                disabledCheckedThumbColor = NyxtraNeonGreen,
-                disabledCheckedTrackColor = NyxtraNeonGreen.copy(alpha = 0.3f)
+                checkedThumbColor = AccentCoral,
+                checkedTrackColor = AccentCoral.copy(alpha = 0.3f),
+                disabledCheckedThumbColor = AccentCoral,
+                disabledCheckedTrackColor = AccentCoral.copy(alpha = 0.3f)
             )
         )
     }

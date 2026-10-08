@@ -24,7 +24,7 @@ Manajemen Profil & Akun
  * Editor profil manual untuk mengubah Server IP/Bug, Port, UUID/Password, SNI, dan Path
  * Ekspor profil ke clipboard atau bagikan format URL
 Antarmuka & Dashboard Pengguna
- * Tampilan utama familier ala V2Ray/Netmod: tombol sakelar koneksi besar, indikator status, dan rincian server aktif
+ * Tampilan utama modern & elegan: daftar tunnel profile, group selector, floating connect button, dan panel konfigurasi low-latency.
  * Tes latensi TCP/ICMP langsung dari kartu profil sebelum koneksi dinyalakan
  * Monitor kecepatan upload dan download secara real-time
  * Tab Live Log untuk memantau status jabat tangan koneksi dan mendiagnosis error
