@@ -1,0 +1,54 @@
+name: Build Nyxtra APKs
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android APK (Modern & Legacy)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build Modern & Legacy APKs
+        run: ./gradlew assembleModernRelease assembleLegacyRelease --stacktrace
+
+      - name: Upload Modern APK (arm64-v8a)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyxtra-modern-arm64
+          path: app/build/outputs/apk/modern/release/*.apk
+          retention-days: 14
+
+      - name: Upload Legacy APK (universal)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyxtra-legacy-universal
+          path: app/build/outputs/apk/legacy/release/*.apk
+          retention-days: 14
+
+      - name: Upload All APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyxtra-all-apks
+          path: app/build/outputs/apk/**/*.apk
+          retention-days: 14

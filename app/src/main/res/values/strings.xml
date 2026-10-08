@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Nyxtra</string>
+    <string name="dashboard_tab">Dashboard</string>
+    <string name="profiles_tab">Profiles</string>
+    <string name="per_app_tab">App Filter</string>
+    <string name="logs_tab">Live Logs</string>
+    <string name="settings_tab">Engine</string>
+</resources>
