@@ -2,10 +2,7 @@ package com.nyxtra.vpn.ui.screens.profiles
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,11 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -25,13 +18,18 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,27 +39,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.ProtocolType
 import com.nyxtra.vpn.data.model.TransportType
-import com.nyxtra.vpn.ui.theme.ActionPrimaryBg
-import com.nyxtra.vpn.ui.theme.ActionPrimaryText
-import com.nyxtra.vpn.ui.theme.BorderStrong
-import com.nyxtra.vpn.ui.theme.BorderSubtle
-import com.nyxtra.vpn.ui.theme.CanvasBg
-import com.nyxtra.vpn.ui.theme.CardBg
-import com.nyxtra.vpn.ui.theme.CardSelectedBg
-import com.nyxtra.vpn.ui.theme.SurfaceBg
-import com.nyxtra.vpn.ui.theme.TextMuted
-import com.nyxtra.vpn.ui.theme.TextPrimary
-import com.nyxtra.vpn.ui.theme.TextSecondary
+import com.nyxtra.vpn.ui.theme.NyxtraDark
+import com.nyxtra.vpn.ui.theme.NyxtraSurface
+import com.nyxtra.vpn.ui.theme.NyxtraTeal
+import com.nyxtra.vpn.ui.theme.TextGray
+import com.nyxtra.vpn.ui.theme.TextWhite
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileEditScreen(
     viewModel: ProfilesViewModel,
@@ -84,251 +76,181 @@ fun ProfileEditScreen(
     var isTls by remember { mutableStateOf(profile.isTls) }
     var allowInsecure by remember { mutableStateOf(profile.allowInsecure) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CanvasBg)
-    ) {
-        // App Bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .background(SurfaceBg)
-                .border(1.dp, BorderSubtle)
-                .padding(horizontal = 6.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = TextPrimary
-                )
-            }
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = "Edit Profile",
-                color = TextPrimary,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.2).sp
+    Scaffold(
+        containerColor = NyxtraDark,
+        topBar = {
+            TopAppBar(
+                title = { Text("Edit Profile", color = TextWhite) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextWhite)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = NyxtraSurface)
             )
         }
-
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Protocol Tabs
-            Text(
-                text = "PROTOCOL",
-                color = TextMuted,
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp
-            )
+            // Protocol Selector
+            Text("Protocol", color = TextGray, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ProtocolType.values().forEach { proto ->
-                    val isSelected = protocol == proto
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (isSelected) CardSelectedBg else CardBg)
-                            .border(
-                                width = 1.dp,
-                                color = if (isSelected) BorderStrong else BorderSubtle,
-                                shape = RoundedCornerShape(6.dp)
-                            )
-                            .clickable { protocol = proto }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = proto.displayName,
-                            color = if (isSelected) TextPrimary else TextSecondary,
-                            fontSize = 12.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    FilterChip(
+                        selected = protocol == proto,
+                        onClick = { protocol = proto },
+                        label = { Text(proto.displayName) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = NyxtraTeal,
+                            selectedLabelColor = Color.White
                         )
-                    }
+                    )
                 }
             }
 
-            // Name
-            EditInput(
-                label = "REMARKS / NAME",
+            // Profile Name
+            OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                placeholder = "e.g. SG Melbikomas 01"
+                label = { Text("Profile Name") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
-            // Host & Port
+            // Server Address & Port
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(modifier = Modifier.weight(2.5f)) {
-                    EditInput(
-                        label = "SERVER / DESTINATION IP",
-                        value = serverAddress,
-                        onValueChange = { serverAddress = it },
-                        placeholder = "104.18.41.141 or host"
-                    )
-                }
+                OutlinedTextField(
+                    value = serverAddress,
+                    onValueChange = { serverAddress = it },
+                    label = { Text("Server Address / IP") },
+                    singleLine = true,
+                    modifier = Modifier.weight(2.5f)
+                )
 
-                Box(modifier = Modifier.weight(1f)) {
-                    EditInput(
-                        label = "PORT",
-                        value = serverPort.toString(),
-                        onValueChange = { serverPort = it.toIntOrNull() ?: 443 },
-                        placeholder = "443",
-                        keyboardType = KeyboardType.Number
-                    )
-                }
+                OutlinedTextField(
+                    value = serverPort.toString(),
+                    onValueChange = { serverPort = it.toIntOrNull() ?: 443 },
+                    label = { Text("Port") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             // Bug Host
-            EditInput(
-                label = "BUG HOST (HTTP HOST HEADER)",
+            OutlinedTextField(
                 value = bugHost,
                 onValueChange = { bugHost = it },
-                placeholder = "e.g. quiz.vidio.com"
+                label = { Text("Bug Host (Host Header)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
             // SNI
-            EditInput(
-                label = "SNI (SERVER NAME INDICATION)",
+            OutlinedTextField(
                 value = sni,
                 onValueChange = { sni = it },
-                placeholder = "Leave empty to fallback to Bug Host"
+                label = { Text("SNI (Server Name Indication)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
             // UUID / Password
-            EditInput(
-                label = if (protocol == ProtocolType.TROJAN) "PASSWORD" else "UUID",
+            OutlinedTextField(
                 value = uuidOrPassword,
                 onValueChange = { uuidOrPassword = it },
-                placeholder = "3a7b-..."
+                label = { Text(if (protocol == ProtocolType.TROJAN) "Password" else "UUID") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
             // Transport Selector
-            Text(
-                text = "TRANSPORT",
-                color = TextMuted,
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp
-            )
+            Text("Transport", color = TextGray, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 TransportType.values().forEach { trans ->
-                    val isSelected = transport == trans
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (isSelected) CardSelectedBg else CardBg)
-                            .border(
-                                width = 1.dp,
-                                color = if (isSelected) BorderStrong else BorderSubtle,
-                                shape = RoundedCornerShape(6.dp)
-                            )
-                            .clickable { transport = trans }
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = trans.displayName,
-                            color = if (isSelected) TextPrimary else TextSecondary,
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    FilterChip(
+                        selected = transport == trans,
+                        onClick = { transport = trans },
+                        label = { Text(trans.displayName) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = NyxtraTeal,
+                            selectedLabelColor = Color.White
                         )
-                    }
+                    )
                 }
             }
 
             // Path
-            EditInput(
-                label = "PATH",
+            OutlinedTextField(
                 value = path,
                 onValueChange = { path = it },
-                placeholder = "/ws or /httpupgrade"
+                label = { Text("Path") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
             // TLS Switch
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(CardBg)
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text(text = "TLS Encryption", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    Text(text = "Enable transport security layer", color = TextMuted, fontSize = 11.sp)
+                    Text("TLS", color = TextWhite, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text("Enable TLS encryption", color = TextGray, fontSize = 12.sp)
                 }
                 Switch(
                     checked = isTls,
                     onCheckedChange = { isTls = it },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = ActionPrimaryText,
-                        checkedTrackColor = ActionPrimaryBg,
-                        uncheckedThumbColor = TextMuted,
-                        uncheckedTrackColor = SurfaceBg
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = NyxtraTeal
                     )
                 )
             }
 
-            // Insecure Switch
+            // Allow Insecure Switch
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(CardBg)
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text(text = "Allow Insecure", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    Text(text = "Skip TLS certificate verification", color = TextMuted, fontSize = 11.sp)
+                    Text("Allow Insecure", color = TextWhite, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text("Skip TLS certificate verification", color = TextGray, fontSize = 12.sp)
                 }
                 Switch(
                     checked = allowInsecure,
                     onCheckedChange = { allowInsecure = it },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = ActionPrimaryText,
-                        checkedTrackColor = ActionPrimaryBg,
-                        uncheckedThumbColor = TextMuted,
-                        uncheckedTrackColor = SurfaceBg
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = NyxtraTeal
                     )
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Save Button
             Button(
                 onClick = {
                     if (name.isBlank() || serverAddress.isBlank() || uuidOrPassword.isBlank()) {
-                        Toast.makeText(context, "Fill required fields!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Please fill required fields", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     val updated = profile.copy(
@@ -345,59 +267,20 @@ fun ProfileEditScreen(
                         allowInsecure = allowInsecure
                     )
                     viewModel.saveEditingProfile(updated)
-                    Toast.makeText(context, "Saved!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show()
                     onNavigateBack()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(46.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = ActionPrimaryBg),
-                shape = RoundedCornerShape(6.dp)
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = NyxtraTeal)
             ) {
-                Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = ActionPrimaryText, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "SAVE CONFIGURATION", color = ActionPrimaryText, fontWeight = FontWeight.Bold, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = 0.5.sp)
+                Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Save Configuration", color = Color.White, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
         }
-    }
-}
-
-@Composable
-private fun EditInput(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    keyboardType: KeyboardType = KeyboardType.Text
-) {
-    Column {
-        Text(
-            text = label,
-            color = TextMuted,
-            fontSize = 10.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp,
-            modifier = Modifier.padding(bottom = 6.dp)
-        )
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = { Text(placeholder, color = TextMuted, fontSize = 12.sp, fontFamily = FontFamily.Monospace) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            shape = RoundedCornerShape(6.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = CardBg,
-                unfocusedContainerColor = CardBg,
-                focusedBorderColor = BorderStrong,
-                unfocusedBorderColor = BorderSubtle,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary
-            )
-        )
     }
 }

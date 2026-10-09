@@ -2,7 +2,6 @@ package com.nyxtra.vpn.ui.screens.dashboard
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,11 +17,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NetworkCheck
@@ -30,14 +27,20 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,11 +49,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,18 +60,14 @@ import com.nyxtra.vpn.data.model.VpnState
 import com.nyxtra.vpn.ui.components.FloatingConnectionButton
 import com.nyxtra.vpn.ui.components.TunnelProfileCard
 import com.nyxtra.vpn.ui.screens.profiles.ProfilesViewModel
-import com.nyxtra.vpn.ui.theme.NyxtraAccent
-import com.nyxtra.vpn.ui.theme.NyxtraAccentSubtle
-import com.nyxtra.vpn.ui.theme.NyxtraBorder
-import com.nyxtra.vpn.ui.theme.NyxtraCard
 import com.nyxtra.vpn.ui.theme.NyxtraDark
+import com.nyxtra.vpn.ui.theme.NyxtraDivider
 import com.nyxtra.vpn.ui.theme.NyxtraSurface
-import com.nyxtra.vpn.ui.theme.PastelOrange
-import com.nyxtra.vpn.ui.theme.TextMuted
-import com.nyxtra.vpn.ui.theme.TextOnAccent
-import com.nyxtra.vpn.ui.theme.TextPrimary
-import com.nyxtra.vpn.ui.theme.TextSecondary
+import com.nyxtra.vpn.ui.theme.NyxtraTeal
+import com.nyxtra.vpn.ui.theme.TextGray
+import com.nyxtra.vpn.ui.theme.TextWhite
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     dashboardViewModel: DashboardViewModel,
@@ -89,69 +87,33 @@ fun DashboardScreen(
     val importDialogVisible by profilesViewModel.importDialogVisible.collectAsState()
 
     var showMenu by remember { mutableStateOf(false) }
-    var selectedGroup by remember { mutableStateOf("Default") }
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val tabTitles = listOf("Default", "Gaming")
 
     val selectedProfile = profiles.firstOrNull { it.isSelected } ?: profiles.firstOrNull()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(NyxtraDark)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top App Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .background(NyxtraSurface)
-                    .border(1.dp, NyxtraBorder)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+    Scaffold(
+        containerColor = NyxtraDark,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Nyxtra",
+                        color = TextWhite,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
                         Icon(
                             imageVector = Icons.Default.Menu,
                             contentDescription = "Drawer",
-                            tint = TextPrimary
+                            tint = TextWhite
                         )
                     }
-
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    Text(
-                        text = "Nyxtra",
-                        color = TextPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Import URI button
-                    IconButton(onClick = { profilesViewModel.showImportDialog() }) {
-                        Icon(
-                            imageVector = Icons.Default.ContentPaste,
-                            contentDescription = "Import URI",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(19.dp)
-                        )
-                    }
-
-                    // Scan QR button
-                    IconButton(onClick = {
-                        Toast.makeText(context, "Scan QR: Point camera at config QR code", Toast.LENGTH_SHORT).show()
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = "Scan QR",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(19.dp)
-                        )
-                    }
-
+                },
+                actions = {
                     // Ping all
                     IconButton(
                         onClick = { profilesViewModel.pingAll() },
@@ -160,31 +122,46 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.NetworkCheck,
                             contentDescription = "Ping All",
-                            tint = if (isPingingAll) NyxtraAccent else TextSecondary,
-                            modifier = Modifier.size(19.dp)
+                            tint = if (isPingingAll) NyxtraTeal else TextWhite
                         )
                     }
 
-                    // Overflow Menu
+                    // Scan QR
+                    IconButton(onClick = {
+                        Toast.makeText(context, "Scan QR: Point camera at config QR code", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = "Scan QR",
+                            tint = TextWhite
+                        )
+                    }
+
+                    // Add / Import
+                    IconButton(onClick = { profilesViewModel.showImportDialog() }) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Import",
+                            tint = TextWhite
+                        )
+                    }
+
+                    // 3-dots Menu
                     Box {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 contentDescription = "More",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(19.dp)
+                                tint = TextWhite
                             )
                         }
 
                         DropdownMenu(
                             expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            modifier = Modifier
-                                .background(NyxtraSurface)
-                                .border(1.dp, NyxtraBorder, RoundedCornerShape(6.dp))
+                            onDismissRequest = { showMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Add Profile Manually", color = TextPrimary, fontSize = 13.sp) },
+                                text = { Text("Add Manually") },
                                 onClick = {
                                     showMenu = false
                                     profilesViewModel.startCreateProfile()
@@ -192,14 +169,14 @@ fun DashboardScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Live Logs", color = TextPrimary, fontSize = 13.sp) },
+                                text = { Text("Live Logs") },
                                 onClick = {
                                     showMenu = false
                                     onNavigateToLogs()
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Engine Settings", color = TextPrimary, fontSize = 13.sp) },
+                                text = { Text("Settings") },
                                 onClick = {
                                     showMenu = false
                                     onNavigateToSettings()
@@ -207,157 +184,120 @@ fun DashboardScreen(
                             )
                         }
                     }
-                }
-            }
-
-            // 2D Solid Connection Status Banner
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = NyxtraSurface
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingConnectionButton(
+                state = vpnState,
+                onClick = { dashboardViewModel.toggleConnection() }
+            )
+        },
+        bottomBar = {
             if (vpnState == VpnState.CONNECTED || vpnState == VpnState.CONNECTING) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(NyxtraCard)
-                        .border(1.dp, if (vpnState == VpnState.CONNECTED) NyxtraAccent else NyxtraBorder, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .background(NyxtraSurface)
                 ) {
+                    Divider(color = NyxtraDivider)
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f, fill = false)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(if (vpnState == VpnState.CONNECTED) NyxtraAccent else PastelOrange)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (vpnState == VpnState.CONNECTED) "CONNECTED: ${selectedProfile?.name ?: "Nyxtra Core"}" else "CONNECTING...",
-                            color = TextPrimary,
-                            fontSize = 12.sp,
+                            text = if (vpnState == VpnState.CONNECTED) {
+                                selectedProfile?.name ?: "Connected"
+                            } else {
+                                "Connecting..."
+                            },
+                            color = if (vpnState == VpnState.CONNECTED) NyxtraTeal else TextGray,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            maxLines = 1
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
-                    }
 
-                    if (vpnState == VpnState.CONNECTED) {
-                        Text(
-                            text = "↓ ${trafficStats.formatDownloadSpeed()}  ↑ ${trafficStats.formatUploadSpeed()}",
-                            color = NyxtraAccent,
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (vpnState == VpnState.CONNECTED) {
+                            Text(
+                                text = "↓ ${trafficStats.formatDownloadSpeed()}  ↑ ${trafficStats.formatUploadSpeed()}",
+                                color = TextWhite,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
             }
-
-            // Group Selector & Add Action
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            // Group Tabs
+            TabRow(
+                selectedTabIndex = selectedTabIndex,
+                containerColor = NyxtraSurface,
+                contentColor = NyxtraTeal,
+                divider = { Divider(color = NyxtraDivider) }
             ) {
-                // Quick create button
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(NyxtraCard)
-                        .border(1.dp, NyxtraBorder, RoundedCornerShape(6.dp))
-                        .clickable {
-                            profilesViewModel.startCreateProfile()
-                            onNavigateToEdit()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add Profile",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(18.dp)
+                tabTitles.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = {
+                            Text(
+                                text = title,
+                                color = if (selectedTabIndex == index) NyxtraTeal else TextGray,
+                                fontSize = 14.sp,
+                                fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
                     )
                 }
-
-                Spacer(modifier = Modifier.width(10.dp))
-
-                // Group Tab: DEFAULT
-                GroupTab(
-                    label = "DEFAULT",
-                    count = profiles.size,
-                    isSelected = selectedGroup == "Default",
-                    onClick = { selectedGroup = "Default" }
-                )
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                // Group Tab: GAMING
-                GroupTab(
-                    label = "GAMING",
-                    count = null,
-                    isSelected = selectedGroup == "Gaming",
-                    onClick = { selectedGroup = "Gaming" }
-                )
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Text(
-                    text = "${profiles.size} NODES",
-                    color = TextMuted,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Profile Cards Feed or Empty State
+            // Profile List
             if (profiles.isEmpty()) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(NyxtraCard)
-                        .border(1.dp, NyxtraBorder, RoundedCornerShape(6.dp))
-                        .padding(24.dp),
+                        .fillMaxSize()
+                        .padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "NO TUNNEL PROFILES",
-                            color = TextMuted,
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
+                            text = "No Profiles",
+                            color = TextGray,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Import a configuration URI to start VPN tunneling",
-                            color = TextSecondary,
-                            fontSize = 12.sp
+                            text = "Tap + to add or import a config",
+                            color = TextGray,
+                            fontSize = 13.sp
                         )
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = { profilesViewModel.showImportDialog() },
-                            colors = ButtonDefaults.buttonColors(containerColor = NyxtraAccent),
-                            shape = RoundedCornerShape(6.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = NyxtraTeal)
                         ) {
-                            Text(text = "Import URI", color = TextOnAccent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Import Config", color = Color.White)
                         }
                     }
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(profiles, key = { it.id }) { profile ->
                         TunnelProfileCard(
@@ -372,82 +312,32 @@ fun DashboardScreen(
                             onShare = {
                                 val uri = profilesViewModel.exportUri(profile)
                                 clipboardManager.setText(AnnotatedString(uri))
-                                Toast.makeText(context, "URI copied to clipboard", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "URI copied", Toast.LENGTH_SHORT).show()
                             }
                         )
                     }
 
                     item {
-                        Spacer(modifier = Modifier.height(90.dp))
+                        Spacer(modifier = Modifier.height(80.dp))
                     }
                 }
             }
-        }
-
-        // 2D Solid Floating Action Button (NekoBox Style)
-        FloatingConnectionButton(
-            state = vpnState,
-            onClick = { dashboardViewModel.toggleConnection() },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 20.dp)
-        )
-
-        // Import URI Dialog
-        if (importDialogVisible) {
-            ImportUriModal(
-                onDismiss = { profilesViewModel.hideImportDialog() },
-                onImport = { rawUri ->
-                    val ok = profilesViewModel.importUri(rawUri)
-                    if (ok) {
-                        Toast.makeText(context, "Profile imported!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "Invalid URI (vless, vmess, trojan)", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            )
         }
     }
-}
 
-@Composable
-private fun GroupTab(
-    label: String,
-    count: Int?,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val bg = if (isSelected) NyxtraAccentSubtle else NyxtraCard
-    val borderCol = if (isSelected) NyxtraAccent else NyxtraBorder
-    val textCol = if (isSelected) NyxtraAccent else TextMuted
-
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(bg)
-            .border(1.dp, borderCol, RoundedCornerShape(6.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = label,
-                color = textCol,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-            if (count != null) {
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "$count",
-                    color = textCol.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+    // Import Dialog
+    if (importDialogVisible) {
+        ImportUriModal(
+            onDismiss = { profilesViewModel.hideImportDialog() },
+            onImport = { rawUri ->
+                val ok = profilesViewModel.importUri(rawUri)
+                if (ok) {
+                    Toast.makeText(context, "Profile imported!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Invalid URI (vless, vmess, trojan)", Toast.LENGTH_SHORT).show()
+                }
             }
-        }
+        )
     }
 }
 
@@ -461,70 +351,49 @@ private fun ImportUriModal(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = NyxtraSurface,
-        shape = RoundedCornerShape(8.dp),
-        title = {
-            Text(
-                text = "Import Configuration",
-                color = TextPrimary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-        },
+        title = { Text("Import Config", fontWeight = FontWeight.Bold) },
         text = {
             Column {
                 Text(
                     text = "Paste vless://, vmess://, or trojan:// URI:",
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(bottom = 10.dp)
+                    color = TextGray,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
 
                 OutlinedTextField(
                     value = rawText,
                     onValueChange = { rawText = it },
-                    placeholder = { Text("vless://...", color = TextMuted, fontSize = 12.sp, fontFamily = FontFamily.Monospace) },
+                    placeholder = { Text("vless://...", color = TextGray) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = NyxtraCard,
-                        unfocusedContainerColor = NyxtraCard,
-                        focusedBorderColor = NyxtraAccent,
-                        unfocusedBorderColor = NyxtraBorder,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary
-                    )
+                        .height(100.dp)
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Button(
                     onClick = {
                         clipboardManager.getText()?.text?.let { rawText = it }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = NyxtraCard),
-                    shape = RoundedCornerShape(6.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NyxtraBorder),
+                    colors = ButtonDefaults.buttonColors(containerColor = NyxtraSurface),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "Paste from Clipboard", color = TextPrimary, fontSize = 12.sp)
+                    Text("Paste from Clipboard", color = TextWhite)
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = { onImport(rawText) },
-                colors = ButtonDefaults.buttonColors(containerColor = NyxtraAccent),
-                shape = RoundedCornerShape(6.dp)
+                colors = ButtonDefaults.buttonColors(containerColor = NyxtraTeal)
             ) {
-                Text(text = "Import", color = TextOnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("Import", color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = "Cancel", color = TextMuted, fontSize = 12.sp)
+                Text("Cancel", color = TextGray)
             }
         }
     )

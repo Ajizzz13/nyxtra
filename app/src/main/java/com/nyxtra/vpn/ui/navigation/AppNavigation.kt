@@ -26,7 +26,7 @@ import com.nyxtra.vpn.ui.screens.profiles.ProfileEditScreen
 import com.nyxtra.vpn.ui.screens.profiles.ProfilesViewModel
 import com.nyxtra.vpn.ui.screens.settings.SettingsScreen
 import com.nyxtra.vpn.ui.screens.settings.SettingsViewModel
-import com.nyxtra.vpn.ui.theme.CanvasBg
+import com.nyxtra.vpn.ui.theme.NyxtraDark
 import kotlinx.coroutines.launch
 
 @Composable
@@ -71,7 +71,7 @@ fun AppNavigation(
             startDestination = Screen.Dashboard.route,
             modifier = Modifier
                 .fillMaxSize()
-                .background(CanvasBg)
+                .background(NyxtraDark)
         ) {
             // Main Dashboard (Profile list + Floating Connect Button)
             composable(Screen.Dashboard.route) {
