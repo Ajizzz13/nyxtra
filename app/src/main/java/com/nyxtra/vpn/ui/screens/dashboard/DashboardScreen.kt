@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -54,20 +55,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.VpnState
-import com.nyxtra.vpn.ui.components.BentoTelemetryWidget
 import com.nyxtra.vpn.ui.components.FloatingConnectionButton
 import com.nyxtra.vpn.ui.components.TunnelProfileCard
 import com.nyxtra.vpn.ui.screens.profiles.ProfilesViewModel
-import com.nyxtra.vpn.ui.theme.ActionPrimaryBg
-import com.nyxtra.vpn.ui.theme.BorderStrong
-import com.nyxtra.vpn.ui.theme.BorderSubtle
-import com.nyxtra.vpn.ui.theme.CanvasBg
-import com.nyxtra.vpn.ui.theme.CardBg
-import com.nyxtra.vpn.ui.theme.CardSelectedBg
-import com.nyxtra.vpn.ui.theme.PastelCyan
-import com.nyxtra.vpn.ui.theme.SurfaceBg
-import com.nyxtra.vpn.ui.theme.TabBg
+import com.nyxtra.vpn.ui.theme.NyxtraAccent
+import com.nyxtra.vpn.ui.theme.NyxtraAccentSubtle
+import com.nyxtra.vpn.ui.theme.NyxtraBorder
+import com.nyxtra.vpn.ui.theme.NyxtraCard
+import com.nyxtra.vpn.ui.theme.NyxtraDark
+import com.nyxtra.vpn.ui.theme.NyxtraSurface
+import com.nyxtra.vpn.ui.theme.PastelOrange
 import com.nyxtra.vpn.ui.theme.TextMuted
+import com.nyxtra.vpn.ui.theme.TextOnAccent
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
 
@@ -97,16 +96,16 @@ fun DashboardScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CanvasBg)
+            .background(NyxtraDark)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Editorial Technical App Bar
+            // Top App Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .background(SurfaceBg)
-                    .border(1.dp, BorderSubtle)
+                    .background(NyxtraSurface)
+                    .border(1.dp, NyxtraBorder)
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -126,27 +125,8 @@ fun DashboardScreen(
                         text = "Nyxtra",
                         color = TextPrimary,
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.4).sp
+                        fontWeight = FontWeight.Bold
                     )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(BorderSubtle)
-                            .padding(horizontal = 5.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "CORE",
-                            color = TextSecondary,
-                            fontSize = 9.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -162,7 +142,7 @@ fun DashboardScreen(
 
                     // Scan QR button
                     IconButton(onClick = {
-                        Toast.makeText(context, "QR Scanner ready for camera feed", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Scan QR: Point camera at config QR code", Toast.LENGTH_SHORT).show()
                     }) {
                         Icon(
                             imageVector = Icons.Default.QrCodeScanner,
@@ -180,7 +160,7 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.NetworkCheck,
                             contentDescription = "Ping All",
-                            tint = if (isPingingAll) PastelCyan else TextSecondary,
+                            tint = if (isPingingAll) NyxtraAccent else TextSecondary,
                             modifier = Modifier.size(19.dp)
                         )
                     }
@@ -190,7 +170,7 @@ fun DashboardScreen(
                         IconButton(onClick = { showMenu = true }) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More Options",
+                                contentDescription = "More",
                                 tint = TextSecondary,
                                 modifier = Modifier.size(19.dp)
                             )
@@ -200,8 +180,8 @@ fun DashboardScreen(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
                             modifier = Modifier
-                                .background(SurfaceBg)
-                                .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
+                                .background(NyxtraSurface)
+                                .border(1.dp, NyxtraBorder, RoundedCornerShape(6.dp))
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Add Profile Manually", color = TextPrimary, fontSize = 13.sp) },
@@ -230,19 +210,56 @@ fun DashboardScreen(
                 }
             }
 
-            // High-Agency Bento Telemetry Display
-            BentoTelemetryWidget(
-                vpnState = vpnState,
-                trafficStats = trafficStats,
-                selectedProfile = selectedProfile,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-            )
+            // 2D Solid Connection Status Banner
+            if (vpnState == VpnState.CONNECTED || vpnState == VpnState.CONNECTING) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(NyxtraCard)
+                        .border(1.dp, if (vpnState == VpnState.CONNECTED) NyxtraAccent else NyxtraBorder, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (vpnState == VpnState.CONNECTED) NyxtraAccent else PastelOrange)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (vpnState == VpnState.CONNECTED) "CONNECTED: ${selectedProfile?.name ?: "Nyxtra Core"}" else "CONNECTING...",
+                            color = TextPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
+                        )
+                    }
+
+                    if (vpnState == VpnState.CONNECTED) {
+                        Text(
+                            text = "↓ ${trafficStats.formatDownloadSpeed()}  ↑ ${trafficStats.formatUploadSpeed()}",
+                            color = NyxtraAccent,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
 
             // Group Selector & Add Action
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 4.dp),
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Quick create button
@@ -250,8 +267,8 @@ fun DashboardScreen(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(CardBg)
-                        .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
+                        .background(NyxtraCard)
+                        .border(1.dp, NyxtraBorder, RoundedCornerShape(6.dp))
                         .clickable {
                             profilesViewModel.startCreateProfile()
                             onNavigateToEdit()
@@ -293,12 +310,11 @@ fun DashboardScreen(
                     color = TextMuted,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
+                    fontWeight = FontWeight.Bold
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Profile Cards Feed or Empty State
             if (profiles.isEmpty()) {
@@ -306,34 +322,33 @@ fun DashboardScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(14.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(CardBg)
-                        .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(NyxtraCard)
+                        .border(1.dp, NyxtraBorder, RoundedCornerShape(6.dp))
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "NO TUNNEL PROFILES FOUND",
+                            text = "NO TUNNEL PROFILES",
                             color = TextMuted,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp
+                            fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Import a configuration URI to start low-latency tunneling",
+                            text = "Import a configuration URI to start VPN tunneling",
                             color = TextSecondary,
                             fontSize = 12.sp
                         )
                         Spacer(modifier = Modifier.height(14.dp))
                         Button(
                             onClick = { profilesViewModel.showImportDialog() },
-                            colors = ButtonDefaults.buttonColors(containerColor = ActionPrimaryBg),
+                            colors = ButtonDefaults.buttonColors(containerColor = NyxtraAccent),
                             shape = RoundedCornerShape(6.dp)
                         ) {
-                            Text(text = "Import URI", color = CanvasBg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(text = "Import URI", color = TextOnAccent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -342,7 +357,7 @@ fun DashboardScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     items(profiles, key = { it.id }) { profile ->
                         TunnelProfileCard(
@@ -363,13 +378,13 @@ fun DashboardScreen(
                     }
 
                     item {
-                        Spacer(modifier = Modifier.height(96.dp))
+                        Spacer(modifier = Modifier.height(90.dp))
                     }
                 }
             }
         }
 
-        // Tactile Flat Connection Controller
+        // 2D Solid Floating Action Button (NekoBox Style)
         FloatingConnectionButton(
             state = vpnState,
             onClick = { dashboardViewModel.toggleConnection() },
@@ -402,11 +417,9 @@ private fun GroupTab(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val bg = if (isSelected) CardSelectedBg else TabBg
-    val borderCol = if (isSelected) BorderStrong else BorderSubtle
-    val textCol = if (isSelected) TextPrimary else TextMuted
-
-    val display = if (count != null) "$label [$count]" else label
+    val bg = if (isSelected) NyxtraAccentSubtle else NyxtraCard
+    val borderCol = if (isSelected) NyxtraAccent else NyxtraBorder
+    val textCol = if (isSelected) NyxtraAccent else TextMuted
 
     Box(
         modifier = Modifier
@@ -417,14 +430,24 @@ private fun GroupTab(
             .padding(horizontal = 10.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = display,
-            color = textCol,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 0.5.sp
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = label,
+                color = textCol,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+            if (count != null) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "$count",
+                    color = textCol.copy(alpha = 0.7f),
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+        }
     }
 }
 
@@ -438,15 +461,14 @@ private fun ImportUriModal(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = SurfaceBg,
+        containerColor = NyxtraSurface,
         shape = RoundedCornerShape(8.dp),
         title = {
             Text(
                 text = "Import Configuration",
                 color = TextPrimary,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.2).sp
+                fontWeight = FontWeight.Bold
             )
         },
         text = {
@@ -467,10 +489,10 @@ private fun ImportUriModal(
                         .height(100.dp),
                     shape = RoundedCornerShape(6.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = CardBg,
-                        unfocusedContainerColor = CardBg,
-                        focusedBorderColor = BorderStrong,
-                        unfocusedBorderColor = BorderSubtle,
+                        focusedContainerColor = NyxtraCard,
+                        unfocusedContainerColor = NyxtraCard,
+                        focusedBorderColor = NyxtraAccent,
+                        unfocusedBorderColor = NyxtraBorder,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary
                     )
@@ -482,9 +504,9 @@ private fun ImportUriModal(
                     onClick = {
                         clipboardManager.getText()?.text?.let { rawText = it }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CardBg),
+                    colors = ButtonDefaults.buttonColors(containerColor = NyxtraCard),
                     shape = RoundedCornerShape(6.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NyxtraBorder),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(text = "Paste from Clipboard", color = TextPrimary, fontSize = 12.sp)
@@ -494,10 +516,10 @@ private fun ImportUriModal(
         confirmButton = {
             Button(
                 onClick = { onImport(rawText) },
-                colors = ButtonDefaults.buttonColors(containerColor = ActionPrimaryBg),
+                colors = ButtonDefaults.buttonColors(containerColor = NyxtraAccent),
                 shape = RoundedCornerShape(6.dp)
             ) {
-                Text(text = "Import", color = CanvasBg, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(text = "Import", color = TextOnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         },
         dismissButton = {

@@ -29,11 +29,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.AppInfo
-import com.nyxtra.vpn.ui.theme.ActionPrimaryBg
+import com.nyxtra.vpn.ui.theme.NyxtraAccent
+import com.nyxtra.vpn.ui.theme.NyxtraAccentSubtle
 import com.nyxtra.vpn.ui.theme.BorderSubtle
 import com.nyxtra.vpn.ui.theme.CardBg
-import com.nyxtra.vpn.ui.theme.PastelGreen
-import com.nyxtra.vpn.ui.theme.PastelGreenSubtle
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 import com.nyxtra.vpn.ui.theme.TextSecondary
@@ -65,7 +64,7 @@ fun AppItemRow(
             Icon(
                 imageVector = if (app.isGame) Icons.Default.SportsEsports else Icons.Default.Widgets,
                 contentDescription = null,
-                tint = if (app.isGame) PastelGreen else TextMuted,
+                tint = if (app.isGame) NyxtraAccent else TextMuted,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -85,12 +84,12 @@ fun AppItemRow(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(3.dp))
-                            .background(PastelGreenSubtle)
+                            .background(NyxtraAccentSubtle)
                             .padding(horizontal = 5.dp, vertical = 1.dp)
                     ) {
                         Text(
                             text = "GAME",
-                            color = PastelGreen,
+                            color = NyxtraAccent,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
@@ -113,8 +112,8 @@ fun AppItemRow(
             checked = app.isSelected,
             onCheckedChange = { onToggle() },
             colors = CheckboxDefaults.colors(
-                checkedColor = ActionPrimaryBg,
-                checkmarkColor = Color(0xFF101214),
+                checkedColor = NyxtraAccent,
+                checkmarkColor = Color.White,
                 uncheckedColor = TextMuted
             )
         )

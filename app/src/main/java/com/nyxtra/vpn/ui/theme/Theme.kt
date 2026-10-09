@@ -4,20 +4,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
-private val MinimalistColorScheme = darkColorScheme(
-    primary = ActionPrimaryBg,
-    onPrimary = ActionPrimaryText,
-    primaryContainer = CardBg,
+private val NyxtraColorScheme = darkColorScheme(
+    primary = NyxtraAccent,
+    onPrimary = TextOnAccent,
+    primaryContainer = NyxtraCardSelected,
     onPrimaryContainer = TextPrimary,
-    secondary = PastelCyan,
-    onSecondary = TextPrimary,
-    background = CanvasBg,
+    secondary = NyxtraAccentVariant,
+    onSecondary = TextOnAccent,
+    background = NyxtraDark,
     onBackground = TextPrimary,
-    surface = SurfaceBg,
+    surface = NyxtraSurface,
     onSurface = TextPrimary,
-    surfaceVariant = CardBg,
+    surfaceVariant = NyxtraCard,
     onSurfaceVariant = TextSecondary,
-    outline = BorderSubtle
+    outline = NyxtraBorder
 )
 
 @Composable
@@ -25,7 +25,7 @@ fun NyxtraTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = MinimalistColorScheme,
+        colorScheme = NyxtraColorScheme,
         typography = Typography,
         content = content
     )

@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.ui.navigation.Screen
 import com.nyxtra.vpn.ui.theme.BorderSubtle
 import com.nyxtra.vpn.ui.theme.CardSelectedBg
+import com.nyxtra.vpn.ui.theme.NyxtraAccent
+import com.nyxtra.vpn.ui.theme.NyxtraAccentSubtle
 import com.nyxtra.vpn.ui.theme.SurfaceBg
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
@@ -167,10 +169,10 @@ private fun DrawerItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val bg = if (isSelected) CardSelectedBg else SurfaceBg
-    val textCol = if (isSelected) TextPrimary else TextSecondary
-    val iconCol = if (isSelected) TextPrimary else TextMuted
-    val borderMod = if (isSelected) Modifier.border(1.dp, BorderSubtle, RoundedCornerShape(6.dp)) else Modifier
+    val bg = if (isSelected) NyxtraAccentSubtle else SurfaceBg
+    val textCol = if (isSelected) NyxtraAccent else TextSecondary
+    val iconCol = if (isSelected) NyxtraAccent else TextMuted
+    val borderMod = if (isSelected) Modifier.border(1.dp, NyxtraAccent, RoundedCornerShape(6.dp)) else Modifier
 
     Box(
         modifier = Modifier

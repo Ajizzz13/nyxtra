@@ -20,12 +20,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nyxtra.vpn.data.model.LogEntry
 import com.nyxtra.vpn.data.model.LogLevel
-import com.nyxtra.vpn.ui.theme.PastelCyan
-import com.nyxtra.vpn.ui.theme.PastelCyanSubtle
+import com.nyxtra.vpn.ui.theme.NyxtraAccent
+import com.nyxtra.vpn.ui.theme.NyxtraAccentSubtle
+import com.nyxtra.vpn.ui.theme.NyxtraRed
+import com.nyxtra.vpn.ui.theme.NyxtraRedSubtle
 import com.nyxtra.vpn.ui.theme.PastelOrange
 import com.nyxtra.vpn.ui.theme.PastelOrangeSubtle
-import com.nyxtra.vpn.ui.theme.PastelRed
-import com.nyxtra.vpn.ui.theme.PastelRedSubtle
 import com.nyxtra.vpn.ui.theme.TextMuted
 import com.nyxtra.vpn.ui.theme.TextPrimary
 
@@ -35,10 +35,10 @@ fun LogItemRow(
     modifier: Modifier = Modifier
 ) {
     val (textColor, bgColor) = when (entry.level) {
-        LogLevel.DEBUG -> TextMuted to TextMuted.copy(alpha = 0.1f)
-        LogLevel.INFO -> PastelCyan to PastelCyanSubtle
+        LogLevel.DEBUG -> TextMuted to TextMuted.copy(alpha = 0.15f)
+        LogLevel.INFO -> NyxtraAccent to NyxtraAccentSubtle
         LogLevel.WARN -> PastelOrange to PastelOrangeSubtle
-        LogLevel.ERROR -> PastelRed to PastelRedSubtle
+        LogLevel.ERROR -> NyxtraRed to NyxtraRedSubtle
     }
 
     Row(
@@ -77,7 +77,7 @@ fun LogItemRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "[${entry.tag}] ${entry.message}",
-                color = if (entry.level == LogLevel.ERROR) PastelRed else TextPrimary,
+                color = if (entry.level == LogLevel.ERROR) NyxtraRed else TextPrimary,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
                 lineHeight = 15.sp
