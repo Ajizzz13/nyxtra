@@ -169,7 +169,7 @@ fun PerAppProxyScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Installed Apps (${apps.size})", color = TextGray, fontSize = 12.sp)
+                    Text("Installed Apps: ${apps.size}", color = TextGray, fontSize = 12.sp)
                     Text("$selectedCount selected", color = NyxtraTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 

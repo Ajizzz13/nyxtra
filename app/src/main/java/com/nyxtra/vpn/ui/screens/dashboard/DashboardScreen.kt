@@ -1,8 +1,10 @@
 package com.nyxtra.vpn.ui.screens.dashboard
 
+import android.app.Activity
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,12 +14,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
@@ -35,8 +33,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -87,10 +83,16 @@ fun DashboardScreen(
     val importDialogVisible by profilesViewModel.importDialogVisible.collectAsState()
 
     var showMenu by remember { mutableStateOf(false) }
-    var selectedTabIndex by remember { mutableStateOf(0) }
-    val tabTitles = listOf("Default", "Gaming")
 
     val selectedProfile = profiles.firstOrNull { it.isSelected } ?: profiles.firstOrNull()
+
+    val vpnPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            dashboardViewModel.onPermissionGranted(context)
+        }
+    }
 
     Scaffold(
         containerColor = NyxtraDark,
@@ -193,7 +195,11 @@ fun DashboardScreen(
         floatingActionButton = {
             FloatingConnectionButton(
                 state = vpnState,
-                onClick = { dashboardViewModel.toggleConnection() }
+                onClick = {
+                    dashboardViewModel.toggleConnection(context) { intent ->
+                        vpnPermissionLauncher.launch(intent)
+                    }
+                }
             )
         },
         bottomBar = {
@@ -241,30 +247,7 @@ fun DashboardScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Group Tabs
-            TabRow(
-                selectedTabIndex = selectedTabIndex,
-                containerColor = NyxtraSurface,
-                contentColor = NyxtraTeal,
-                divider = { Divider(color = NyxtraDivider) }
-            ) {
-                tabTitles.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
-                        text = {
-                            Text(
-                                text = title,
-                                color = if (selectedTabIndex == index) NyxtraTeal else TextGray,
-                                fontSize = 14.sp,
-                                fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
-                    )
-                }
-            }
-
-            // Profile List
+            // Profile List directly without tabs
             if (profiles.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -332,9 +315,9 @@ fun DashboardScreen(
             onImport = { rawUri ->
                 val ok = profilesViewModel.importUri(rawUri)
                 if (ok) {
-                    Toast.makeText(context, "Profile imported!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Profile imported", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(context, "Invalid URI (vless, vmess, trojan)", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Invalid URI format", Toast.LENGTH_SHORT).show()
                 }
             }
         )
@@ -355,7 +338,7 @@ private fun ImportUriModal(
         text = {
             Column {
                 Text(
-                    text = "Paste vless://, vmess://, or trojan:// URI:",
+                    text = "Paste vless, vmess, or trojan URI:",
                     color = TextGray,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -364,7 +347,7 @@ private fun ImportUriModal(
                 OutlinedTextField(
                     value = rawText,
                     onValueChange = { rawText = it },
-                    placeholder = { Text("vless://...", color = TextGray) },
+                    placeholder = { Text("vless...", color = TextGray) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(100.dp)

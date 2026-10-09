@@ -12,7 +12,7 @@ object MockLogsRepository {
     private val initialLogs = listOf(
         LogEntry(level = LogLevel.INFO, tag = "SYSTEM", message = "Nyxtra Gaming Client v1.0.0 initialized"),
         LogEntry(level = LogLevel.INFO, tag = "ENGINE", message = "Direct FD Handover configured: ON"),
-        LogEntry(level = LogLevel.INFO, tag = "KERNEL", message = "TUN stack mode: system (Linux Kernel Direct)"),
+        LogEntry(level = LogLevel.INFO, tag = "KERNEL", message = "TUN stack mode: system Linux Kernel Direct"),
         LogEntry(level = LogLevel.INFO, tag = "MTU", message = "Virtual interface MTU clamped to 1280 bytes"),
         LogEntry(level = LogLevel.INFO, tag = "TCP", message = "TCP_NODELAY = enabled, keepalive = 15s"),
         LogEntry(level = LogLevel.INFO, tag = "CORE", message = "Sing-box core v1.9.0-rc ready for tunnel establishment")

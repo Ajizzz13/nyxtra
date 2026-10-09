@@ -1,9 +1,9 @@
 package com.nyxtra.vpn.data.model
 
 enum class TunStackMode(val displayName: String, val tag: String) {
-    SYSTEM("System (Linux Kernel Direct)", "system"),
-    MIXED("Mixed (Kernel + Userspace Fallback)", "mixed"),
-    GVISOR("gVisor (Userspace Netstack)", "gvisor")
+    SYSTEM("System Linux Kernel Direct", "system"),
+    MIXED("Mixed Kernel and Userspace Fallback", "mixed"),
+    GVISOR("gVisor Userspace Netstack", "gvisor")
 }
 
 data class EngineConfig(

@@ -9,12 +9,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlin.random.Random
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+import java.net.InetSocketAddress
+import java.net.Socket
+
 object MockProfileRepository {
 
     private val initialProfiles = listOf(
         VpnProfile(
             id = "tyo-equinix-01",
-            name = "TYO · Equinix TY8 [Direct G-Core]",
+            name = "TYO · Equinix TY8 Direct G-Core",
             protocol = ProtocolType.VLESS,
             serverAddress = "tyo-gw01.nyxtra.net",
             serverPort = 443,
@@ -29,7 +37,7 @@ object MockProfileRepository {
         ),
         VpnProfile(
             id = "sin-equinix-02",
-            name = "SIN · Equinix SG1 [Low Jitter Valve]",
+            name = "SIN · Equinix SG1 Low Jitter Valve",
             protocol = ProtocolType.VMESS,
             serverAddress = "sg-edge02.nyxtra.net",
             serverPort = 443,
@@ -44,7 +52,7 @@ object MockProfileRepository {
         ),
         VpnProfile(
             id = "jkt-cyber-03",
-            name = "JKT · Cyber 1 DC [Direct Telkom/Indosat]",
+            name = "JKT · Cyber 1 DC Direct Telkom Indosat",
             protocol = ProtocolType.TROJAN,
             serverAddress = "jkt-direct01.nyxtra.net",
             serverPort = 443,
@@ -99,20 +107,57 @@ object MockProfileRepository {
         }
     }
 
-    suspend fun pingProfile(id: String): Long {
-        val simulatedPing = Random.nextLong(12, 45)
+    suspend fun pingProfile(id: String): Long = withContext(Dispatchers.IO) {
+        val target = _profiles.value.firstOrNull { it.id == id } ?: return@withContext -1L
+        val host = if (target.serverAddress.isNotBlank()) target.serverAddress else "1.1.1.1"
+        val port = if (target.serverPort > 0) target.serverPort else 443
+
+        val pingResult = try {
+            val start = System.currentTimeMillis()
+            val socket = Socket()
+            socket.connect(InetSocketAddress(host, port), 2500)
+            val duration = System.currentTimeMillis() - start
+            socket.close()
+            duration
+        } catch (e: Exception) {
+            -1L
+        }
+
         _profiles.update { list ->
             list.map {
-                if (it.id == id) it.copy(pingMs = simulatedPing) else it
+                if (it.id == id) it.copy(pingMs = pingResult) else it
             }
         }
-        return simulatedPing
+        pingResult
     }
 
-    suspend fun pingAll() {
-        _profiles.update { list ->
-            list.map {
-                it.copy(pingMs = Random.nextLong(12, 55))
+    suspend fun pingAll() = withContext(Dispatchers.IO) {
+        coroutineScope {
+            val currentProfiles = _profiles.value
+            val deferredPings = currentProfiles.map { profile ->
+                async {
+                    val host = if (profile.serverAddress.isNotBlank()) profile.serverAddress else "1.1.1.1"
+                    val port = if (profile.serverPort > 0) profile.serverPort else 443
+                    val pingResult = try {
+                        val start = System.currentTimeMillis()
+                        val socket = Socket()
+                        socket.connect(InetSocketAddress(host, port), 2500)
+                        val duration = System.currentTimeMillis() - start
+                        socket.close()
+                        duration
+                    } catch (e: Exception) {
+                        -1L
+                    }
+                    profile.id to pingResult
+                }
+            }
+
+            val results = deferredPings.awaitAll().toMap()
+            _profiles.update { list ->
+                list.map {
+                    val updatedPing = results[it.id] ?: it.pingMs
+                    it.copy(pingMs = updatedPing)
+                }
             }
         }
     }

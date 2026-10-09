@@ -101,7 +101,7 @@ fun SettingsScreen(
                     Text("MTU", color = TextWhite, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     Text("${config.mtu}", color = NyxtraTeal, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
-                Text("Virtual interface MTU (1280 - 1340)", color = TextGray, fontSize = 12.sp)
+                Text("Virtual interface MTU 1280 to 1340", color = TextGray, fontSize = 12.sp)
 
                 Slider(
                     value = config.mtu.toFloat(),

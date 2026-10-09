@@ -28,6 +28,11 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Download Sing-box Core (libbox.aar)
+        run: |
+          mkdir -p app/libs
+          curl -L -f -s -S -o app/libs/libbox.aar "https://github.com/Asterisk4Magisk/AndroidLibBoxLite/releases/download/v1.14.1-reF1nd/libbox.aar"
+
       - name: Build Modern & Legacy APKs
         run: ./gradlew assembleModernRelease assembleLegacyRelease --stacktrace
 

@@ -76,10 +76,18 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 }
 
 dependencies {
+    if (file("libs/libbox.aar").exists()) {
+        implementation(files("libs/libbox.aar"))
+    } else if (file("libs/libbox-api.jar").exists()) {
+        implementation(files("libs/libbox-api.jar"))
+    }
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")

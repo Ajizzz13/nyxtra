@@ -153,7 +153,7 @@ fun ProfileEditScreen(
             OutlinedTextField(
                 value = bugHost,
                 onValueChange = { bugHost = it },
-                label = { Text("Bug Host (Host Header)") },
+                label = { Text("Bug Host") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -162,7 +162,7 @@ fun ProfileEditScreen(
             OutlinedTextField(
                 value = sni,
                 onValueChange = { sni = it },
-                label = { Text("SNI (Server Name Indication)") },
+                label = { Text("SNI") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
