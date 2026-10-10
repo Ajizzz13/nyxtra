@@ -184,6 +184,13 @@ object SingBoxConfigGenerator {
             TransportType.TCP -> {
                 // Raw TCP transport
             }
+            TransportType.GRPC -> {
+                val grpcObj = JsonObject().apply {
+                    addProperty("type", "grpc")
+                    addProperty("service_name", if (profile.path.isNotBlank()) profile.path.trimStart('/') else "nyxtra-grpc")
+                }
+                out.add("transport", grpcObj)
+            }
         }
 
         // Low latency tuning

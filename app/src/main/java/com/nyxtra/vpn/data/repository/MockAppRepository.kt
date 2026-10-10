@@ -46,4 +46,8 @@ object MockAppRepository {
             list.map { it.copy(isSelected = false) }
         }
     }
+
+    fun getSelectedPackages(): Set<String> {
+        return _apps.value.filter { it.isSelected }.map { it.packageName }.toSet()
+    }
 }
