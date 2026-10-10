@@ -2,6 +2,7 @@ package com.nyxtra.vpn
 
 import android.app.Application
 import android.util.Log
+import com.nyxtra.vpn.core.CrashLogReporter
 import com.nyxtra.vpn.core.LibboxSetup
 import com.nyxtra.vpn.data.repository.MockProfileRepository
 import java.io.File
