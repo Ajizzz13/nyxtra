@@ -34,18 +34,26 @@ import com.nyxtra.vpn.data.repository.MockLogsRepository
 import com.nyxtra.vpn.data.repository.MockProfileRepository
 import io.nekohasekai.libbox.BridgeOptions
 import io.nekohasekai.libbox.BridgeSession
+import io.nekohasekai.libbox.CommandClient
+import io.nekohasekai.libbox.CommandClientHandler
+import io.nekohasekai.libbox.CommandClientOptions
 import io.nekohasekai.libbox.CommandServer
 import io.nekohasekai.libbox.CommandServerHandler
+import io.nekohasekai.libbox.ConnectionEvents
 import io.nekohasekai.libbox.ConnectionOwner
 import io.nekohasekai.libbox.InterfaceUpdateListener
 import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.LocalDNSTransport
+import io.nekohasekai.libbox.LogIterator
 import io.nekohasekai.libbox.NeighborUpdateListener
 import io.nekohasekai.libbox.NetworkInterfaceIterator
+import io.nekohasekai.libbox.OutboundGroupItemIterator
+import io.nekohasekai.libbox.OutboundGroupIterator
 import io.nekohasekai.libbox.OverrideOptions
 import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.PlatformUser
 import io.nekohasekai.libbox.ShellSession
+import io.nekohasekai.libbox.StatusMessage
 import io.nekohasekai.libbox.StringIterator
 import io.nekohasekai.libbox.SystemProxyStatus
 import io.nekohasekai.libbox.TunOptions
@@ -61,11 +69,15 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.net.NetworkInterface
 
-class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
+class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, CommandClientHandler {
 
     private var vpnInterface: ParcelFileDescriptor? = null
     private var commandServer: CommandServer? = null
+    private var commandClient: CommandClient? = null
     private var isCoreRunning = false
+    private var coreTrafficSeen = false
+    private var lastCoreUp = 0L
+    private var lastCoreDown = 0L
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var trafficJob: Job? = null
@@ -260,7 +272,16 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 } catch (t: Throwable) {
                     Log.w(TAG, "Stale server close notice: ${t.message}")
                 }
+                try {
+                    commandClient?.disconnect()
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Stale client disconnect notice: ${t.message}")
+                }
                 commandServer = null
+                commandClient = null
+                coreTrafficSeen = false
+                lastCoreUp = 0L
+                lastCoreDown = 0L
 
                 val server = CommandServer(this@NyxtraVpnService, this@NyxtraVpnService)
                 DebugFileLog.append(this@NyxtraVpnService, "CORE", "CommandServer created, starting")
@@ -287,6 +308,8 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
 
                 startTrafficMonitor()
                 DebugFileLog.append(this@NyxtraVpnService, "TUNNEL", "traffic monitor started")
+
+                connectLogClient()
             } catch (t: Throwable) {
                 Log.e(TAG, "Sing-box core start failure: ${t.message}", t)
                 MockLogsRepository.addLog(LogLevel.ERROR, "CORE", "Core start failed: ${t.message}")
@@ -310,6 +333,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 } catch (t: Throwable) {
                     Log.w(TAG, "Core closeService note: ${t.message}")
                 }
+                disconnectLogClient()
                 try {
                     commandServer?.close()
                 } catch (t: Throwable) {
@@ -317,6 +341,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 }
                 commandServer = null
                 isCoreRunning = false
+                coreTrafficSeen = false
                 File(filesDir, "command.sock").delete()
 
                 vpnInterface?.close()
@@ -358,14 +383,16 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 totalDown += downSpeed
                 totalUp += upSpeed
 
-                NyxtraVpnController.updateTrafficStats(
-                    TrafficStats(
-                        downloadBps = downSpeed,
-                        uploadBps = upSpeed,
-                        totalDownloadBytes = totalDown,
-                        totalUploadBytes = totalUp
+                if (!coreTrafficSeen) {
+                    NyxtraVpnController.updateTrafficStats(
+                        TrafficStats(
+                            downloadBps = downSpeed,
+                            uploadBps = upSpeed,
+                            totalDownloadBytes = totalDown,
+                            totalUploadBytes = totalUp
+                        )
                     )
-                )
+                }
             }
         }
     }
@@ -373,6 +400,31 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     private fun stopTrafficMonitor() {
         trafficJob?.cancel()
         trafficJob = null
+    }
+
+    private fun connectLogClient() {
+        try {
+            val opts = CommandClientOptions()
+            opts.addCommand(Libbox.CommandLog)
+            opts.addCommand(Libbox.CommandStatus)
+            opts.statusInterval = 1000
+            val client = Libbox.newCommandClient(this@NyxtraVpnService, opts)
+            client.connect()
+            commandClient = client
+            DebugFileLog.append(this, "CORE", "command log client connected")
+        } catch (t: Throwable) {
+            Log.w(TAG, "Log client notice: ${t.message}")
+            DebugFileLog.append(this, "CORE", "log client failed: ${t.message}")
+        }
+    }
+
+    private fun disconnectLogClient() {
+        try {
+            commandClient?.disconnect()
+        } catch (t: Throwable) {
+            Log.w(TAG, "Log client disconnect notice: ${t.message}")
+        }
+        commandClient = null
     }
 
     // PlatformInterface Direct FD Implementation
@@ -689,6 +741,90 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         Log.d("NyxtraCore", message ?: "")
     }
     override fun connectSSHAgent(): Int = -1
+
+    // CommandClientHandler implementation - streams core logs into Live Logs
+    override fun clearLogs() {}
+    override fun connected() {
+        DebugFileLog.append(this, "CORE", "log client streaming")
+    }
+    override fun disconnected(message: String?) {
+        DebugFileLog.append(this, "CORE", "log client ended: ${message ?: "closed"}")
+    }
+    override fun initializeClashMode(modes: StringIterator?, current: String?) {}
+    override fun setDefaultLogLevel(level: Int) {}
+    override fun updateClashMode(mode: String?) {}
+    override fun writeConnectionEvents(events: ConnectionEvents?) {}
+    override fun writeGroups(groups: OutboundGroupIterator?) {}
+    override fun writeOutbounds(items: OutboundGroupItemIterator?) {}
+    override fun writeLogs(logs: LogIterator?) {
+        try {
+            val it = logs ?: return
+            while (it.hasNext()) {
+                val entry = try {
+                    it.next()
+                } catch (_: Exception) {
+                    break
+                }
+                val raw = try {
+                    entry.message ?: ""
+                } catch (_: Exception) {
+                    ""
+                }
+                if (raw.isBlank()) continue
+                val clean = raw.replace("(", "[").replace(")", "]").take(280)
+                val level = try {
+                    when (entry.level) {
+                        0 -> LogLevel.DEBUG
+                        1 -> LogLevel.INFO
+                        2 -> LogLevel.WARN
+                        else -> LogLevel.ERROR
+                    }
+                } catch (_: Exception) {
+                    LogLevel.INFO
+                }
+                MockLogsRepository.addLog(level, "CORE", clean)
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "writeLogs notice: ${t.message}")
+        }
+    }
+    override fun writeStatus(status: StatusMessage?) {
+        try {
+            val s = status ?: return
+            if (!s.trafficAvailable) return
+            val up = try {
+                s.uplinkTotal
+            } catch (_: Exception) {
+                return
+            }
+            val down = try {
+                s.downlinkTotal
+            } catch (_: Exception) {
+                return
+            }
+            if (!coreTrafficSeen) {
+                coreTrafficSeen = true
+                lastCoreUp = up
+                lastCoreDown = down
+                NyxtraVpnController.updateTrafficStats(TrafficStats())
+                return
+            }
+            val upSpeed = if (up >= lastCoreUp) up - lastCoreUp else 0L
+            val downSpeed = if (down >= lastCoreDown) down - lastCoreDown else 0L
+            lastCoreUp = up
+            lastCoreDown = down
+            NyxtraVpnController.updateTrafficStats(
+                TrafficStats(
+                    downloadBps = downSpeed,
+                    uploadBps = upSpeed,
+                    totalDownloadBytes = down,
+                    totalUploadBytes = up
+                )
+            )
+        } catch (t: Throwable) {
+            Log.w(TAG, "writeStatus notice: ${t.message}")
+        }
+    }
 
     // Notification handling
     private fun createNotificationChannel() {
