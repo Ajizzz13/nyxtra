@@ -42,10 +42,20 @@ object CrashLogReporter {
             if (latest != null && latest.exists() && latest.length() > 0) {
                 MockLogsRepository.addLog(LogLevel.ERROR, "CORE", "Native crash report found: ${latest.name}")
                 try {
-                    latest.readLines().takeLast(15).forEach { line ->
+                    val lines = latest.readLines()
+                    lines.take(30).forEach { line ->
                         val clean = line.replace("(", "[").replace(")", "]").take(220)
                         if (clean.isNotBlank()) {
                             MockLogsRepository.addLog(LogLevel.ERROR, "CORE", clean)
+                        }
+                    }
+                    if (lines.size > 35) {
+                        MockLogsRepository.addLog(LogLevel.ERROR, "CORE", "skipped ${lines.size - 35} middle lines")
+                        lines.takeLast(5).forEach { line ->
+                            val clean = line.replace("(", "[").replace(")", "]").take(220)
+                            if (clean.isNotBlank()) {
+                                MockLogsRepository.addLog(LogLevel.ERROR, "CORE", clean)
+                            }
                         }
                     }
                 } catch (_: Exception) {
