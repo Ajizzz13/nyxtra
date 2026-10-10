@@ -42,7 +42,6 @@ object SingBoxConfigGenerator {
                     addProperty("type", "udp")
                     addProperty("tag", "direct-dns")
                     addProperty("server", "1.1.1.1")
-                    addProperty("detour", "direct")
                 })
             }
             add("servers", servers)
