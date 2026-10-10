@@ -2,46 +2,30 @@ package com.nyxtra.vpn
 
 import android.app.Application
 import android.util.Log
+import com.nyxtra.vpn.core.LibboxSetup
 import com.nyxtra.vpn.data.repository.MockProfileRepository
-import io.nekohasekai.libbox.Libbox
-import io.nekohasekai.libbox.SetupOptions
 import java.io.File
 
 class NyxtraApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        installCrashHandler()
         MockProfileRepository.init(this)
-        initLibbox()
+        LibboxSetup.ensureInitialized(this)
     }
 
-    private fun initLibbox() {
-        try {
-            go.Seq.setContext(this)
-
-            val baseDir = filesDir
-            baseDir.mkdirs()
-            val tempDir = cacheDir
-            tempDir.mkdirs()
-
-            // Remove any stale command socket from previous abnormal termination
-            val sockFile = File(baseDir, "command.sock")
-            if (sockFile.exists()) {
-                sockFile.delete()
+    private fun installCrashHandler() {
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                Log.e("NyxtraApp", "Uncaught exception in ${thread.name}: ${throwable.message}", throwable)
+                val crashFile = File(filesDir, "crash_last.txt")
+                val stack = Log.getStackTraceString(throwable)
+                crashFile.writeText("Thread: ${thread.name}\n$stack")
+            } catch (_: Exception) {
             }
-
-            val options = SetupOptions().apply {
-                basePath = baseDir.absolutePath
-                workingPath = baseDir.absolutePath
-                tempPath = tempDir.absolutePath
-                fixAndroidStack = true
-                logMaxLines = 3000
-                debug = true
-            }
-            Libbox.setup(options)
-            Log.i("NyxtraApp", "Libbox setup initialized successfully at ${baseDir.absolutePath}")
-        } catch (t: Throwable) {
-            Log.e("NyxtraApp", "Libbox setup failed: ${t.message}", t)
+            defaultHandler?.uncaughtException(thread, throwable)
         }
     }
 }

@@ -128,7 +128,6 @@ object SingBoxConfigGenerator {
         when (profile.protocol) {
             ProtocolType.VLESS -> {
                 out.addProperty("uuid", profile.uuidOrPassword)
-                out.addProperty("flow", "")
                 out.addProperty("packet_encoding", "xudp")
             }
             ProtocolType.VMESS -> {

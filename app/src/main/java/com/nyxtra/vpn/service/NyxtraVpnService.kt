@@ -20,6 +20,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.nyxtra.vpn.MainActivity
 import com.nyxtra.vpn.R
+import com.nyxtra.vpn.core.LibboxSetup
 import com.nyxtra.vpn.core.NyxtraVpnController
 import com.nyxtra.vpn.core.SingBoxConfigGenerator
 import com.nyxtra.vpn.data.model.EngineConfig
@@ -43,7 +44,6 @@ import io.nekohasekai.libbox.NetworkInterfaceIterator
 import io.nekohasekai.libbox.OverrideOptions
 import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.PlatformUser
-import io.nekohasekai.libbox.SetupOptions
 import io.nekohasekai.libbox.ShellSession
 import io.nekohasekai.libbox.StringIterator
 import io.nekohasekai.libbox.SystemProxyStatus
@@ -79,33 +79,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         super.onCreate()
         MockProfileRepository.init(this)
         createNotificationChannel()
-        initCoreRuntime()
-    }
-
-    private fun initCoreRuntime() {
-        try {
-            go.Seq.setContext(this)
-
-            val baseDir = filesDir
-            baseDir.mkdirs()
-            val tempDir = cacheDir
-            tempDir.mkdirs()
-
-            File(baseDir, "command.sock").delete()
-
-            val options = SetupOptions().apply {
-                basePath = baseDir.absolutePath
-                workingPath = baseDir.absolutePath
-                tempPath = tempDir.absolutePath
-                fixAndroidStack = true
-                logMaxLines = 3000
-                debug = true
-            }
-            Libbox.setup(options)
-            Log.i(TAG, "Libbox core setup completed in service")
-        } catch (t: Throwable) {
-            Log.w(TAG, "Libbox runtime setup notice: ${t.message}")
-        }
+        LibboxSetup.ensureInitialized(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -222,20 +196,66 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
             NyxtraVpnController.setActiveProfileId(profile.id)
 
             MockLogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Connecting to ${profile.name}")
-            MockLogsRepository.addLog(LogLevel.DEBUG, "CONFIG", "Endpoint: ${profile.serverAddress}:${profile.serverPort}")
-
-            val selectedApps = MockAppRepository.getSelectedPackages().toList()
-            val configJson = SingBoxConfigGenerator.generate(
-                profile = profile,
-                engineConfig = engineConfig,
-                perAppPackages = selectedApps,
-                isPerAppWhitelist = selectedApps.isNotEmpty()
-            )
 
             try {
+                if (!LibboxSetup.ensureInitialized(this@NyxtraVpnService)) {
+                    MockLogsRepository.addLog(LogLevel.ERROR, "CORE", "Core runtime init failed")
+                    NyxtraVpnController.updateState(VpnState.ERROR)
+                    stopVpnTunnel()
+                    return@launch
+                }
+
+                if (profile.serverAddress.isBlank()) {
+                    MockLogsRepository.addLog(LogLevel.ERROR, "CONFIG", "Server address is empty")
+                    NyxtraVpnController.updateState(VpnState.ERROR)
+                    stopVpnTunnel()
+                    return@launch
+                }
+                if (profile.uuidOrPassword.isBlank()) {
+                    MockLogsRepository.addLog(LogLevel.ERROR, "CONFIG", "UUID or password is empty")
+                    NyxtraVpnController.updateState(VpnState.ERROR)
+                    stopVpnTunnel()
+                    return@launch
+                }
+                if (profile.serverPort <= 0 || profile.serverPort > 65535) {
+                    MockLogsRepository.addLog(LogLevel.ERROR, "CONFIG", "Server port out of range")
+                    NyxtraVpnController.updateState(VpnState.ERROR)
+                    stopVpnTunnel()
+                    return@launch
+                }
+
+                MockLogsRepository.addLog(LogLevel.DEBUG, "CONFIG", "Endpoint: ${profile.serverAddress}:${profile.serverPort}")
+
+                val selectedApps = try {
+                    MockAppRepository.getSelectedPackages().toList()
+                } catch (t: Throwable) {
+                    Log.w(TAG, "getSelectedPackages notice: ${t.message}")
+                    emptyList()
+                }
+                val configJson = SingBoxConfigGenerator.generate(
+                    profile = profile,
+                    engineConfig = engineConfig,
+                    perAppPackages = selectedApps,
+                    isPerAppWhitelist = selectedApps.isNotEmpty()
+                )
+
+                try {
+                    Libbox.checkConfig(configJson)
+                } catch (t: Throwable) {
+                    Log.e(TAG, "Config check failed: ${t.message}", t)
+                    MockLogsRepository.addLog(LogLevel.ERROR, "CONFIG", "Invalid config: ${t.message}")
+                    NyxtraVpnController.updateState(VpnState.ERROR)
+                    stopVpnTunnel()
+                    return@launch
+                }
+
                 File(filesDir, "command.sock").delete()
 
-                commandServer?.close()
+                try {
+                    commandServer?.close()
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Stale server close notice: ${t.message}")
+                }
                 commandServer = null
 
                 val server = CommandServer(this@NyxtraVpnService, this@NyxtraVpnService)
@@ -446,15 +466,17 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
             if (pfd == null) {
                 Log.e(TAG, "builder.establish() returned null - VPN not prepared or revoked")
                 MockLogsRepository.addLog(LogLevel.ERROR, "ENGINE", "Failed to establish TUN: VPN permission missing or revoked")
-                error("Failed to establish TUN interface")
+                throw Exception("Failed to establish TUN interface")
             }
             vpnInterface = pfd
             MockLogsRepository.addLog(LogLevel.INFO, "ENGINE", "Direct FD Handover complete - fd=${pfd.fd} MTU=$mtu")
             return pfd.fd
+        } catch (e: Exception) {
+            throw e
         } catch (t: Throwable) {
             Log.e(TAG, "openTun error: ${t.message}", t)
             MockLogsRepository.addLog(LogLevel.ERROR, "ENGINE", "openTun failed: ${t.message}")
-            throw t
+            throw Exception("openTun failed: ${t.message}")
         }
     }
 
@@ -464,8 +486,16 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
 
     override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) {
         defaultInterfaceListener = listener
-        updateDefaultInterface()
         registerNetworkCallback()
+        // Defer the first callback off the Go thread to avoid re-entrant Java to Go deadlock
+        serviceScope.launch {
+            try {
+                delay(200)
+                updateDefaultInterface()
+            } catch (t: Throwable) {
+                Log.w(TAG, "deferred interface update notice: ${t.message}")
+            }
+        }
     }
 
     override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) {
@@ -479,10 +509,18 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
             val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
             val activeNetwork = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) cm.activeNetwork else null
             if (activeNetwork != null) {
-                val caps = cm.getNetworkCapabilities(activeNetwork)
+                val caps = try {
+                    cm.getNetworkCapabilities(activeNetwork)
+                } catch (_: Exception) {
+                    null
+                }
                 if (caps != null && !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
                     caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)) {
-                    val linkProps = cm.getLinkProperties(activeNetwork)
+                    val linkProps = try {
+                        cm.getLinkProperties(activeNetwork)
+                    } catch (_: Exception) {
+                        null
+                    }
                     val ifaceName = linkProps?.interfaceName
                     if (!ifaceName.isNullOrEmpty() && !ifaceName.startsWith("tun") && !ifaceName.startsWith("nyxtra")) {
                         val ifaceIndex = try {
@@ -491,16 +529,26 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                             -1
                         }
                         if (ifaceIndex >= 0) {
-                            listener.updateDefaultInterface(ifaceName, ifaceIndex, false, false)
+                            try {
+                                listener.updateDefaultInterface(ifaceName, ifaceIndex, false, false)
+                            } catch (t: Throwable) {
+                                Log.w(TAG, "listener update notice: ${t.message}")
+                            }
                             Log.d(TAG, "Default network interface updated: $ifaceName (index $ifaceIndex)")
                             return
                         }
                     }
                 }
             }
-            listener.updateDefaultInterface("", -1, false, false)
+            try {
+                listener.updateDefaultInterface("", -1, false, false)
+            } catch (t: Throwable) {
+                Log.w(TAG, "listener clear notice: ${t.message}")
+            }
         } catch (e: Exception) {
             Log.w(TAG, "updateDefaultInterface notice: ${e.message}")
+        } catch (t: Throwable) {
+            Log.w(TAG, "updateDefaultInterface fatal notice: ${t.message}")
         }
     }
 
@@ -543,61 +591,18 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         networkCallback = null
     }
 
-    private class SimpleStringIterator(private val list: List<String>) : StringIterator {
-        private var index = 0
-        override fun hasNext(): Boolean = index < list.size
-        override fun len(): Int = list.size
-        override fun next(): String = list[index++]
-    }
-
-    private class RealNetworkInterfaceIterator(
-        private val list: List<io.nekohasekai.libbox.NetworkInterface>
-    ) : NetworkInterfaceIterator {
-        private var index = 0
-        override fun hasNext(): Boolean = index < list.size
-        override fun next(): io.nekohasekai.libbox.NetworkInterface = list[index++]
+    private class EmptyNetworkInterfaceIterator : NetworkInterfaceIterator {
+        override fun hasNext(): Boolean = false
+        override fun next(): io.nekohasekai.libbox.NetworkInterface {
+            throw java.util.NoSuchElementException("empty")
+        }
     }
 
     override fun getInterfaces(): NetworkInterfaceIterator {
-        val result = mutableListOf<io.nekohasekai.libbox.NetworkInterface>()
-        try {
-            val ifaces = NetworkInterface.getNetworkInterfaces() ?: return RealNetworkInterfaceIterator(emptyList())
-            while (ifaces.hasMoreElements()) {
-                val netIface = ifaces.nextElement()
-                if (netIface.isLoopback || !netIface.isUp) continue
-                val name = netIface.name ?: continue
-                if (name.startsWith("tun") || name.startsWith("nyxtra")) continue
-
-                val libIface = io.nekohasekai.libbox.NetworkInterface().apply {
-                    index = netIface.index
-                    this.name = name
-                    mtu = try { netIface.mtu } catch (_: Exception) { 1500 }
-
-                    val addrs = mutableListOf<String>()
-                    val ifaceAddrs = netIface.interfaceAddresses
-                    if (ifaceAddrs != null) {
-                        for (interfaceAddress in ifaceAddrs) {
-                            val host = interfaceAddress.address?.hostAddress ?: continue
-                            val cleanHost = if (host.contains("%")) host.substringBefore("%") else host
-                            val prefix = interfaceAddress.networkPrefixLength.toInt()
-                            addrs.add("$cleanHost/$prefix")
-                        }
-                    }
-                    addresses = SimpleStringIterator(addrs)
-
-                    type = when {
-                        name.startsWith("wlan") -> Libbox.InterfaceTypeWIFI
-                        name.startsWith("rmnet") || name.startsWith("ccmni") || name.startsWith("pdp") -> Libbox.InterfaceTypeCellular
-                        name.startsWith("eth") -> Libbox.InterfaceTypeEthernet
-                        else -> Libbox.InterfaceTypeOther
-                    }
-                }
-                result.add(libIface)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "getInterfaces notice: ${e.message}")
-        }
-        return RealNetworkInterfaceIterator(result)
+        // Pure Java empty iterator. Never create libbox Go objects here because
+        // this callback runs on a Go thread and Java to Go re-entrancy can deadlock.
+        // Default interface is still reported via updateDefaultInterface.
+        return EmptyNetworkInterfaceIterator()
     }
 
     // PlatformInterface stubs
