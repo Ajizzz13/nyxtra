@@ -78,8 +78,8 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     override fun onCreate() {
         super.onCreate()
         MockProfileRepository.init(this)
-        initCoreRuntime()
         createNotificationChannel()
+        initCoreRuntime()
     }
 
     private fun initCoreRuntime() {
@@ -109,49 +109,109 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val action = intent?.action ?: ACTION_CONNECT
-        when (action) {
-            ACTION_CONNECT -> {
-                val profileId = intent?.getStringExtra(EXTRA_PROFILE_ID)
-                val profile = if (profileId != null) {
-                    MockProfileRepository.profiles.value.firstOrNull { it.id == profileId }
-                } else {
-                    MockProfileRepository.getSelectedProfile()
+        try {
+            val action = intent?.action ?: ACTION_CONNECT
+            when (action) {
+                ACTION_CONNECT -> {
+                    val profileId = intent?.getStringExtra(EXTRA_PROFILE_ID)
+                    val profile = if (profileId != null) {
+                        MockProfileRepository.profiles.value.firstOrNull { it.id == profileId }
+                    } else {
+                        MockProfileRepository.getSelectedProfile()
+                    }
+
+                    val title = profile?.name ?: "Nyxtra"
+                    startForegroundSafely(title, "Establishing secure tunnel...")
+
+                    if (profile == null) {
+                        MockLogsRepository.addLog(LogLevel.ERROR, "TUNNEL", "Cannot start VPN: No profile found")
+                        NyxtraVpnController.updateState(VpnState.ERROR)
+                        stopForegroundSafely()
+                        stopSelf()
+                        return START_NOT_STICKY
+                    }
+
+                    startVpnTunnel(profile)
                 }
-
-                val title = profile?.name ?: "Nyxtra"
-                startForegroundSafely(title, "Establishing secure tunnel...")
-
-                if (profile == null) {
-                    MockLogsRepository.addLog(LogLevel.ERROR, "TUNNEL", "Cannot start VPN: No profile found")
-                    NyxtraVpnController.updateState(VpnState.ERROR)
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
-                    return START_NOT_STICKY
+                ACTION_DISCONNECT -> {
+                    stopVpnTunnel()
                 }
-
-                startVpnTunnel(profile)
             }
-            ACTION_DISCONNECT -> {
-                stopVpnTunnel()
-            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "Fatal exception in onStartCommand: ${t.message}", t)
+            MockLogsRepository.addLog(LogLevel.ERROR, "SERVICE", "Fatal startup error: ${t.message}")
+            NyxtraVpnController.updateState(VpnState.ERROR)
+            stopForegroundSafely()
+            stopSelf()
         }
         return START_NOT_STICKY
     }
 
     private fun startForegroundSafely(title: String, text: String) {
+        createNotificationChannel()
         val notification = buildNotification(title, text)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ServiceCompat.startForeground(
-                this,
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            )
+            try {
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
+                )
+                return
+            } catch (t1: Throwable) {
+                Log.w(TAG, "startForeground with SYSTEM_EXEMPTED failed: ${t1.message}, trying SPECIAL_USE")
+            }
+            try {
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+                return
+            } catch (t2: Throwable) {
+                Log.w(TAG, "startForeground with SPECIAL_USE failed: ${t2.message}, trying 0")
+            }
+            try {
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, 0)
+                return
+            } catch (t3: Throwable) {
+                Log.w(TAG, "startForeground with 0 failed: ${t3.message}, trying un-typed")
+            }
+            try {
+                startForeground(NOTIFICATION_ID, notification)
+            } catch (t4: Throwable) {
+                Log.e(TAG, "All startForeground variants failed: ${t4.message}", t4)
+            }
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, 0)
+            try {
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, 0)
+            } catch (t: Throwable) {
+                try {
+                    startForeground(NOTIFICATION_ID, notification)
+                } catch (t2: Throwable) {
+                    Log.e(TAG, "startForeground failed: ${t2.message}", t2)
+                }
+            }
         } else {
-            startForeground(NOTIFICATION_ID, notification)
+            try {
+                startForeground(NOTIFICATION_ID, notification)
+            } catch (t: Throwable) {
+                Log.e(TAG, "startForeground legacy failed: ${t.message}", t)
+            }
+        }
+    }
+
+    private fun stopForegroundSafely() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                stopForeground(true)
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "stopForeground error: ${t.message}")
         }
     }
 
@@ -169,12 +229,14 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 profile = profile,
                 engineConfig = engineConfig,
                 perAppPackages = selectedApps,
-                isPerAppWhitelist = true
+                isPerAppWhitelist = selectedApps.isNotEmpty()
             )
 
             try {
-                // Ensure stale unix domain socket is deleted before starting
                 File(filesDir, "command.sock").delete()
+
+                commandServer?.close()
+                commandServer = null
 
                 val server = CommandServer(this@NyxtraVpnService, this@NyxtraVpnService)
                 server.start()
@@ -200,31 +262,41 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
 
     private fun stopVpnTunnel() {
         serviceScope.launch {
-            NyxtraVpnController.updateState(VpnState.DISCONNECTING)
-            MockLogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Disconnect requested")
-
-            stopTrafficMonitor()
-            unregisterNetworkCallback()
-
             try {
-                commandServer?.closeService()
-                commandServer?.close()
+                NyxtraVpnController.updateState(VpnState.DISCONNECTING)
+                MockLogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Disconnect requested")
+
+                stopTrafficMonitor()
+                unregisterNetworkCallback()
+
+                try {
+                    commandServer?.closeService()
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Core closeService note: ${t.message}")
+                }
+                try {
+                    commandServer?.close()
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Core close note: ${t.message}")
+                }
                 commandServer = null
                 isCoreRunning = false
                 File(filesDir, "command.sock").delete()
+
+                vpnInterface?.close()
+                vpnInterface = null
+
+                NyxtraVpnController.updateState(VpnState.DISCONNECTED)
+                NyxtraVpnController.updateTrafficStats(TrafficStats())
+                MockLogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Tunnel closed. Virtual TUN interface released.")
+
+                stopForegroundSafely()
+                stopSelf()
             } catch (t: Throwable) {
-                Log.w(TAG, "Core close note: ${t.message}")
+                Log.e(TAG, "Error during stopVpnTunnel: ${t.message}", t)
+                stopForegroundSafely()
+                stopSelf()
             }
-
-            vpnInterface?.close()
-            vpnInterface = null
-
-            NyxtraVpnController.updateState(VpnState.DISCONNECTED)
-            NyxtraVpnController.updateTrafficStats(TrafficStats())
-            MockLogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Tunnel closed. Virtual TUN interface released.")
-
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
         }
     }
 
@@ -272,7 +344,9 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         try {
             val builder = Builder()
                 .setSession("Nyxtra")
-                .setMtu(options.mtu)
+
+            val mtu = if (options.mtu > 0) options.mtu else 1280
+            builder.setMtu(mtu)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 builder.setMetered(false)
@@ -295,8 +369,11 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
             val dns = try { options.dnsServerAddress } catch (_: Exception) { null }
             if (dns != null) {
                 while (dns.hasNext()) {
-                    builder.addDnsServer(dns.next())
-                    hasDns = true
+                    val d = dns.next()
+                    if (!d.isNullOrBlank()) {
+                        builder.addDnsServer(d)
+                        hasDns = true
+                    }
                 }
             }
             if (!hasDns) {
@@ -306,30 +383,46 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
 
             builder.addRoute("0.0.0.0", 0)
 
-            // Exclude Nyxtra app itself so proxy sockets bypass the TUN
-            try {
-                builder.addDisallowedApplication(packageName)
-            } catch (e: Exception) {
-                Log.w(TAG, "Cannot exclude own package: ${e.message}")
-            }
-
-            // Per-App Proxy configuration
+            // Mutually exclusive App Routing (addAllowedApplication and addDisallowedApplication cannot be mixed)
+            val includeList = mutableListOf<String>()
             val includePkg = try { options.includePackage } catch (_: Exception) { null }
             if (includePkg != null) {
                 while (includePkg.hasNext()) {
                     val pkg = includePkg.next()
+                    if (!pkg.isNullOrBlank()) {
+                        includeList.add(pkg)
+                    }
+                }
+            }
+
+            val excludeList = mutableListOf<String>()
+            val excludePkg = try { options.excludePackage } catch (_: Exception) { null }
+            if (excludePkg != null) {
+                while (excludePkg.hasNext()) {
+                    val pkg = excludePkg.next()
+                    if (!pkg.isNullOrBlank()) {
+                        excludeList.add(pkg)
+                    }
+                }
+            }
+
+            if (includeList.isNotEmpty()) {
+                // Whitelist mode: ONLY allow specified packages
+                for (pkg in includeList) {
                     try {
                         builder.addAllowedApplication(pkg)
                     } catch (e: Exception) {
                         Log.w(TAG, "Cannot add allowed package $pkg: ${e.message}")
                     }
                 }
-            }
-
-            val excludePkg = try { options.excludePackage } catch (_: Exception) { null }
-            if (excludePkg != null) {
-                while (excludePkg.hasNext()) {
-                    val pkg = excludePkg.next()
+            } else {
+                // Default full tunnel / Blacklist mode: exclude Nyxtra app so proxy sockets bypass the TUN
+                try {
+                    builder.addDisallowedApplication(packageName)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Cannot exclude own package: ${e.message}")
+                }
+                for (pkg in excludeList) {
                     if (pkg != packageName) {
                         try {
                             builder.addDisallowedApplication(pkg)
@@ -340,13 +433,23 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 }
             }
 
+            builder.setConfigureIntent(
+                PendingIntent.getActivity(
+                    this,
+                    0,
+                    Intent(this, MainActivity::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
+
             val pfd = builder.establish()
             if (pfd == null) {
-                Log.e(TAG, "builder.establish() returned null")
+                Log.e(TAG, "builder.establish() returned null - VPN not prepared or revoked")
+                MockLogsRepository.addLog(LogLevel.ERROR, "ENGINE", "Failed to establish TUN: VPN permission missing or revoked")
                 error("Failed to establish TUN interface")
             }
             vpnInterface = pfd
-            MockLogsRepository.addLog(LogLevel.INFO, "ENGINE", "Direct FD Handover complete - fd=${pfd.fd} MTU=${options.mtu}")
+            MockLogsRepository.addLog(LogLevel.INFO, "ENGINE", "Direct FD Handover complete - fd=${pfd.fd} MTU=$mtu")
             return pfd.fd
         } catch (t: Throwable) {
             Log.e(TAG, "openTun error: ${t.message}", t)
@@ -375,22 +478,27 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         try {
             val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
             val activeNetwork = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) cm.activeNetwork else null
-            val linkProps = activeNetwork?.let { cm.getLinkProperties(it) }
-            val ifaceName = linkProps?.interfaceName
-            val ifaceIndex = ifaceName?.let {
-                try {
-                    NetworkInterface.getByName(it)?.index ?: -1
-                } catch (_: Exception) {
-                    -1
+            if (activeNetwork != null) {
+                val caps = cm.getNetworkCapabilities(activeNetwork)
+                if (caps != null && !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
+                    caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)) {
+                    val linkProps = cm.getLinkProperties(activeNetwork)
+                    val ifaceName = linkProps?.interfaceName
+                    if (!ifaceName.isNullOrEmpty() && !ifaceName.startsWith("tun") && !ifaceName.startsWith("nyxtra")) {
+                        val ifaceIndex = try {
+                            NetworkInterface.getByName(ifaceName)?.index ?: -1
+                        } catch (_: Exception) {
+                            -1
+                        }
+                        if (ifaceIndex >= 0) {
+                            listener.updateDefaultInterface(ifaceName, ifaceIndex, false, false)
+                            Log.d(TAG, "Default network interface updated: $ifaceName (index $ifaceIndex)")
+                            return
+                        }
+                    }
                 }
-            } ?: -1
-
-            if (!ifaceName.isNullOrEmpty() && ifaceIndex >= 0) {
-                listener.updateDefaultInterface(ifaceName, ifaceIndex, false, false)
-                Log.d(TAG, "Default network interface updated: $ifaceName (index $ifaceIndex)")
-            } else {
-                listener.updateDefaultInterface("", -1, false, false)
             }
+            listener.updateDefaultInterface("", -1, false, false)
         } catch (e: Exception) {
             Log.w(TAG, "updateDefaultInterface notice: ${e.message}")
         }
@@ -402,6 +510,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
             val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
             val request = NetworkRequest.Builder()
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
                 .build()
             val callback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
@@ -411,6 +520,9 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                     updateDefaultInterface()
                 }
                 override fun onLinkPropertiesChanged(network: Network, linkProperties: android.net.LinkProperties) {
+                    updateDefaultInterface()
+                }
+                override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
                     updateDefaultInterface()
                 }
             }
@@ -431,12 +543,62 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         networkCallback = null
     }
 
-    private class EmptyNetworkInterfaceIterator : NetworkInterfaceIterator {
-        override fun hasNext(): Boolean = false
-        override fun next(): io.nekohasekai.libbox.NetworkInterface = error("empty iterator")
+    private class SimpleStringIterator(private val list: List<String>) : StringIterator {
+        private var index = 0
+        override fun hasNext(): Boolean = index < list.size
+        override fun len(): Int = list.size
+        override fun next(): String = list[index++]
     }
 
-    override fun getInterfaces(): NetworkInterfaceIterator = EmptyNetworkInterfaceIterator()
+    private class RealNetworkInterfaceIterator(
+        private val list: List<io.nekohasekai.libbox.NetworkInterface>
+    ) : NetworkInterfaceIterator {
+        private var index = 0
+        override fun hasNext(): Boolean = index < list.size
+        override fun next(): io.nekohasekai.libbox.NetworkInterface = list[index++]
+    }
+
+    override fun getInterfaces(): NetworkInterfaceIterator {
+        val result = mutableListOf<io.nekohasekai.libbox.NetworkInterface>()
+        try {
+            val ifaces = NetworkInterface.getNetworkInterfaces() ?: return RealNetworkInterfaceIterator(emptyList())
+            while (ifaces.hasMoreElements()) {
+                val netIface = ifaces.nextElement()
+                if (netIface.isLoopback || !netIface.isUp) continue
+                val name = netIface.name ?: continue
+                if (name.startsWith("tun") || name.startsWith("nyxtra")) continue
+
+                val libIface = io.nekohasekai.libbox.NetworkInterface().apply {
+                    index = netIface.index
+                    this.name = name
+                    mtu = try { netIface.mtu } catch (_: Exception) { 1500 }
+
+                    val addrs = mutableListOf<String>()
+                    val ifaceAddrs = netIface.interfaceAddresses
+                    if (ifaceAddrs != null) {
+                        for (interfaceAddress in ifaceAddrs) {
+                            val host = interfaceAddress.address?.hostAddress ?: continue
+                            val cleanHost = if (host.contains("%")) host.substringBefore("%") else host
+                            val prefix = interfaceAddress.networkPrefixLength.toInt()
+                            addrs.add("$cleanHost/$prefix")
+                        }
+                    }
+                    addresses = SimpleStringIterator(addrs)
+
+                    type = when {
+                        name.startsWith("wlan") -> Libbox.InterfaceTypeWIFI
+                        name.startsWith("rmnet") || name.startsWith("ccmni") || name.startsWith("pdp") -> Libbox.InterfaceTypeCellular
+                        name.startsWith("eth") -> Libbox.InterfaceTypeEthernet
+                        else -> Libbox.InterfaceTypeOther
+                    }
+                }
+                result.add(libIface)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "getInterfaces notice: ${e.message}")
+        }
+        return RealNetworkInterfaceIterator(result)
+    }
 
     // PlatformInterface stubs
     override fun clearDNSCache() {}
@@ -519,7 +681,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(text)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(openIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Disconnect", disconnectIntent)
             .setOngoing(true)

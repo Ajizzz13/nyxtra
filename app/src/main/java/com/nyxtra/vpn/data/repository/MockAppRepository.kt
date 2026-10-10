@@ -9,9 +9,9 @@ import kotlinx.coroutines.flow.update
 object MockAppRepository {
 
     private val sampleApps = listOf(
-        AppInfo("com.dts.freefireth", "Free Fire", isSystemApp = false, isGame = true, isSelected = true),
-        AppInfo("com.dts.freefiremax", "Free Fire MAX", isSystemApp = false, isGame = true, isSelected = true),
-        AppInfo("com.mobile.legends", "Mobile Legends: Bang Bang", isSystemApp = false, isGame = true, isSelected = true),
+        AppInfo("com.dts.freefireth", "Free Fire", isSystemApp = false, isGame = true, isSelected = false),
+        AppInfo("com.dts.freefiremax", "Free Fire MAX", isSystemApp = false, isGame = true, isSelected = false),
+        AppInfo("com.mobile.legends", "Mobile Legends: Bang Bang", isSystemApp = false, isGame = true, isSelected = false),
         AppInfo("com.tencent.ig", "PUBG Mobile", isSystemApp = false, isGame = true, isSelected = false),
         AppInfo("com.miHoYo.GenshinImpact", "Genshin Impact", isSystemApp = false, isGame = true, isSelected = false),
         AppInfo("com.riotgames.league.wildrift", "League of Legends: Wild Rift", isSystemApp = false, isGame = true, isSelected = false),
