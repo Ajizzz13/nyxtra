@@ -27,54 +27,40 @@ object SingBoxConfigGenerator {
         }
         root.add("log", logObj)
 
-        // 2. DNS configuration
+        // 2. DNS configuration (sing-box 1.14.0+ schema)
         val dnsObj = JsonObject().apply {
             val servers = JsonArray().apply {
+                // Remote DNS queried through proxy tunnel
                 add(JsonObject().apply {
+                    addProperty("type", "tcp")
                     addProperty("tag", "remote-dns")
-                    addProperty("address", "tcp://1.1.1.1")
-                    addProperty("address_resolver", "direct-dns")
+                    addProperty("server", "1.1.1.1")
                     addProperty("detour", "proxy")
                 })
+                // Direct DNS for local network queries
                 add(JsonObject().apply {
+                    addProperty("type", "local")
                     addProperty("tag", "direct-dns")
-                    addProperty("address", "local")
                     addProperty("detour", "direct")
                 })
             }
             add("servers", servers)
-
-            val rules = JsonArray().apply {
-                // Proxy server's own domain must be resolved via direct-dns to avoid chicken-egg loop
-                val isServerDomain = profile.serverAddress.any { it.isLetter() }
-                if (isServerDomain) {
-                    add(JsonObject().apply {
-                        val domainArray = JsonArray().apply { add(profile.serverAddress) }
-                        add("domain", domainArray)
-                        addProperty("server", "direct-dns")
-                    })
-                }
-
-                // Any traffic deliberately routed to direct outbound resolves via direct-dns
-                add(JsonObject().apply {
-                    val outboundArray = JsonArray().apply { add("direct") }
-                    add("outbound", outboundArray)
-                    addProperty("server", "direct-dns")
-                })
-            }
-            add("rules", rules)
             addProperty("final", "remote-dns")
             addProperty("strategy", "prefer_ipv4")
         }
         root.add("dns", dnsObj)
 
-        // 3. Inbound TUN configuration (Direct FD passed at runtime)
+        // 3. Inbound TUN configuration (sing-box 1.14.0+ schema)
         val inbounds = JsonArray().apply {
             val tunInbound = JsonObject().apply {
                 addProperty("type", "tun")
                 addProperty("tag", "tun-in")
                 addProperty("interface_name", "nyxtra0")
-                addProperty("inet4_address", "172.19.0.1/30")
+
+                val addrArray = JsonArray().apply {
+                    add("172.19.0.1/30")
+                }
+                add("address", addrArray)
                 addProperty("mtu", engineConfig.mtu)
                 addProperty("auto_route", true)
                 addProperty("strict_route", false)
@@ -106,22 +92,20 @@ object SingBoxConfigGenerator {
                 addProperty("type", "direct")
                 addProperty("tag", "direct")
             })
-
-            // DNS outbound
-            add(JsonObject().apply {
-                addProperty("type", "dns")
-                addProperty("tag", "dns-out")
-            })
         }
         root.add("outbounds", outbounds)
 
-        // 5. Route configuration
+        // 5. Route configuration (sing-box 1.14.0+ schema with hijack-dns action)
         val routeObj = JsonObject().apply {
             addProperty("auto_detect_interface", true)
+            addProperty("default_domain_resolver", "direct-dns")
             val rules = JsonArray().apply {
                 add(JsonObject().apply {
+                    addProperty("action", "sniff")
+                })
+                add(JsonObject().apply {
                     addProperty("protocol", "dns")
-                    addProperty("outbound", "dns-out")
+                    addProperty("action", "hijack-dns")
                 })
             }
             add("rules", rules)
@@ -139,6 +123,7 @@ object SingBoxConfigGenerator {
         out.addProperty("tag", "proxy")
         out.addProperty("server", profile.serverAddress)
         out.addProperty("server_port", profile.serverPort)
+        out.addProperty("domain_resolver", "direct-dns")
 
         when (profile.protocol) {
             ProtocolType.VLESS -> {
