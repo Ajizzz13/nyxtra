@@ -32,7 +32,8 @@ object SingBoxConfigGenerator {
             val servers = JsonArray().apply {
                 add(JsonObject().apply {
                     addProperty("tag", "remote-dns")
-                    addProperty("address", "1.1.1.1")
+                    addProperty("address", "tcp://1.1.1.1")
+                    addProperty("address_resolver", "direct-dns")
                     addProperty("detour", "proxy")
                 })
                 add(JsonObject().apply {
@@ -44,12 +45,25 @@ object SingBoxConfigGenerator {
             add("servers", servers)
 
             val rules = JsonArray().apply {
+                // Proxy server's own domain must be resolved via direct-dns to avoid chicken-egg loop
+                val isServerDomain = profile.serverAddress.any { it.isLetter() }
+                if (isServerDomain) {
+                    add(JsonObject().apply {
+                        val domainArray = JsonArray().apply { add(profile.serverAddress) }
+                        add("domain", domainArray)
+                        addProperty("server", "direct-dns")
+                    })
+                }
+
+                // Any traffic deliberately routed to direct outbound resolves via direct-dns
                 add(JsonObject().apply {
-                    addProperty("outbound", "any")
+                    val outboundArray = JsonArray().apply { add("direct") }
+                    add("outbound", outboundArray)
                     addProperty("server", "direct-dns")
                 })
             }
             add("rules", rules)
+            addProperty("final", "remote-dns")
             addProperty("strategy", "prefer_ipv4")
         }
         root.add("dns", dnsObj)
@@ -130,11 +144,13 @@ object SingBoxConfigGenerator {
             ProtocolType.VLESS -> {
                 out.addProperty("uuid", profile.uuidOrPassword)
                 out.addProperty("flow", "")
+                out.addProperty("packet_encoding", "xudp")
             }
             ProtocolType.VMESS -> {
                 out.addProperty("uuid", profile.uuidOrPassword)
                 out.addProperty("security", "auto")
                 out.addProperty("alter_id", 0)
+                out.addProperty("packet_encoding", "xudp")
             }
             ProtocolType.TROJAN -> {
                 out.addProperty("password", profile.uuidOrPassword)
@@ -193,7 +209,7 @@ object SingBoxConfigGenerator {
             }
         }
 
-        // Low latency tuning
+        // Low latency gaming tuning
         if (engineConfig.tcpNoDelay) {
             out.addProperty("tcp_fast_open", true)
             out.addProperty("tcp_multi_path", false)
