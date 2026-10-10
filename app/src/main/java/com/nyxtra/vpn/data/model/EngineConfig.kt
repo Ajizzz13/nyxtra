@@ -9,7 +9,7 @@ enum class TunStackMode(val displayName: String, val tag: String) {
 data class EngineConfig(
     val mtu: Int = 1280,
     val directFdHandover: Boolean = true,
-    val tunStack: TunStackMode = TunStackMode.SYSTEM,
+    val tunStack: TunStackMode = TunStackMode.MIXED,
     val zeroRoutingSniffing: Boolean = true,
     val tcpNoDelay: Boolean = true,
     val keepaliveIntervalSeconds: Int = 15,

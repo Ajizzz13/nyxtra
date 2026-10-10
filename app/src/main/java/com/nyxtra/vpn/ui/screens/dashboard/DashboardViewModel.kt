@@ -2,6 +2,7 @@ package com.nyxtra.vpn.ui.screens.dashboard
 
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nyxtra.vpn.core.NyxtraVpnController
@@ -30,6 +31,7 @@ class DashboardViewModel : ViewModel() {
             VpnState.DISCONNECTED, VpnState.ERROR -> {
                 val profile = activeProfile.value
                 if (profile == null) {
+                    Toast.makeText(context, "No profile selected", Toast.LENGTH_SHORT).show()
                     MockLogsRepository.addLog(LogLevel.ERROR, "TUNNEL", "Cannot connect: No profile selected")
                     return
                 }
@@ -49,7 +51,11 @@ class DashboardViewModel : ViewModel() {
     }
 
     fun onPermissionGranted(context: Context) {
-        val profile = activeProfile.value ?: return
+        val profile = activeProfile.value
+        if (profile == null) {
+            Toast.makeText(context, "No profile selected", Toast.LENGTH_SHORT).show()
+            return
+        }
         NyxtraVpnController.startVpn(context, profile.id)
     }
 }

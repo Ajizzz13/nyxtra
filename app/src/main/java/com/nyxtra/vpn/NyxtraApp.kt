@@ -2,6 +2,7 @@ package com.nyxtra.vpn
 
 import android.app.Application
 import android.util.Log
+import com.nyxtra.vpn.data.repository.MockProfileRepository
 import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.SetupOptions
 import java.io.File
@@ -10,6 +11,7 @@ class NyxtraApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        MockProfileRepository.init(this)
         initLibbox()
     }
 

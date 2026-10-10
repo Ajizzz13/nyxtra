@@ -37,10 +37,11 @@ object SingBoxConfigGenerator {
                     addProperty("server", "1.1.1.1")
                     addProperty("detour", "proxy")
                 })
-                // Direct DNS for local network queries
+                // Direct DNS for outbound bootstrap resolving
                 add(JsonObject().apply {
-                    addProperty("type", "local")
+                    addProperty("type", "udp")
                     addProperty("tag", "direct-dns")
+                    addProperty("server", "1.1.1.1")
                     addProperty("detour", "direct")
                 })
             }

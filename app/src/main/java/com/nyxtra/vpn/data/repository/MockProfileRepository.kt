@@ -1,79 +1,64 @@
 package com.nyxtra.vpn.data.repository
 
-import com.nyxtra.vpn.data.model.ProtocolType
-import com.nyxtra.vpn.data.model.TransportType
+import android.content.Context
+import android.util.Log
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.nyxtra.vpn.data.model.VpnProfile
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlin.random.Random
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
 
 object MockProfileRepository {
 
-    private val initialProfiles = listOf(
-        VpnProfile(
-            id = "tyo-equinix-01",
-            name = "TYO · Equinix TY8 Direct G-Core",
-            protocol = ProtocolType.VLESS,
-            serverAddress = "tyo-gw01.nyxtra.net",
-            serverPort = 443,
-            uuidOrPassword = "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
-            bugHost = "edge.valve.net",
-            sni = "edge.valve.net",
-            path = "/nyxtra-vless-ws",
-            transport = TransportType.WS,
-            isTls = true,
-            pingMs = 24L,
-            isSelected = true
-        ),
-        VpnProfile(
-            id = "sin-equinix-02",
-            name = "SIN · Equinix SG1 Low Jitter Valve",
-            protocol = ProtocolType.VMESS,
-            serverAddress = "sg-edge02.nyxtra.net",
-            serverPort = 443,
-            uuidOrPassword = "f0e1d2c3-b4a5-6789-0123-456789abcdef",
-            bugHost = "quiz.int.vidio.com",
-            sni = "quiz.int.vidio.com",
-            path = "/nyxtra-vmess",
-            transport = TransportType.HTTP_UPGRADE,
-            isTls = true,
-            pingMs = 19L,
-            isSelected = false
-        ),
-        VpnProfile(
-            id = "jkt-cyber-03",
-            name = "JKT · Cyber 1 DC Direct Telkom Indosat",
-            protocol = ProtocolType.TROJAN,
-            serverAddress = "jkt-direct01.nyxtra.net",
-            serverPort = 443,
-            uuidOrPassword = "nyxtra_super_secret_trojan_pass",
-            bugHost = "support.zoom.us",
-            sni = "support.zoom.us",
-            path = "/trojan-upgrade",
-            transport = TransportType.HTTP_UPGRADE,
-            isTls = true,
-            pingMs = 12L,
-            isSelected = false
-        )
-    )
+    private val gson = Gson()
+    private var storageFile: File? = null
 
-    private val _profiles = MutableStateFlow<List<VpnProfile>>(initialProfiles)
+    private val _profiles = MutableStateFlow<List<VpnProfile>>(emptyList())
     val profiles: StateFlow<List<VpnProfile>> = _profiles.asStateFlow()
+
+    fun init(context: Context) {
+        if (storageFile != null) return
+        val file = File(context.filesDir, "nyxtra_profiles.json")
+        storageFile = file
+        if (file.exists()) {
+            try {
+                val json = file.readText()
+                val type = object : TypeToken<List<VpnProfile>>() {}.type
+                val loaded: List<VpnProfile>? = gson.fromJson(json, type)
+                if (loaded != null) {
+                    _profiles.value = loaded
+                }
+            } catch (e: Exception) {
+                Log.w("ProfileRepository", "Failed to load profiles: ${e.message}")
+            }
+        }
+    }
+
+    private fun persist() {
+        val file = storageFile ?: return
+        try {
+            val json = gson.toJson(_profiles.value)
+            file.writeText(json)
+        } catch (e: Exception) {
+            Log.w("ProfileRepository", "Failed to save profiles: ${e.message}")
+        }
+    }
 
     fun selectProfile(id: String) {
         _profiles.update { list ->
             list.map { it.copy(isSelected = it.id == id) }
         }
+        persist()
     }
 
     fun getSelectedProfile(): VpnProfile? {
@@ -86,12 +71,14 @@ object MockProfileRepository {
             val newProfile = if (!hasSelected) profile.copy(isSelected = true) else profile
             list + newProfile
         }
+        persist()
     }
 
     fun updateProfile(profile: VpnProfile) {
         _profiles.update { list ->
             list.map { if (it.id == profile.id) profile else it }
         }
+        persist()
     }
 
     fun deleteProfile(id: String) {
@@ -105,6 +92,7 @@ object MockProfileRepository {
                 filtered
             }
         }
+        persist()
     }
 
     suspend fun pingProfile(id: String): Long = withContext(Dispatchers.IO) {
@@ -128,6 +116,7 @@ object MockProfileRepository {
                 if (it.id == id) it.copy(pingMs = pingResult) else it
             }
         }
+        persist()
         pingResult
     }
 
@@ -159,6 +148,7 @@ object MockProfileRepository {
                     it.copy(pingMs = updatedPing)
                 }
             }
+            persist()
         }
     }
 }

@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -16,6 +17,7 @@ import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import com.nyxtra.vpn.MainActivity
 import com.nyxtra.vpn.R
 import com.nyxtra.vpn.core.NyxtraVpnController
@@ -75,6 +77,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
 
     override fun onCreate() {
         super.onCreate()
+        MockProfileRepository.init(this)
         initCoreRuntime()
         createNotificationChannel()
     }
@@ -110,7 +113,24 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         when (action) {
             ACTION_CONNECT -> {
                 val profileId = intent?.getStringExtra(EXTRA_PROFILE_ID)
-                startVpnTunnel(profileId)
+                val profile = if (profileId != null) {
+                    MockProfileRepository.profiles.value.firstOrNull { it.id == profileId }
+                } else {
+                    MockProfileRepository.getSelectedProfile()
+                }
+
+                val title = profile?.name ?: "Nyxtra"
+                startForegroundSafely(title, "Establishing secure tunnel...")
+
+                if (profile == null) {
+                    MockLogsRepository.addLog(LogLevel.ERROR, "TUNNEL", "Cannot start VPN: No profile found")
+                    NyxtraVpnController.updateState(VpnState.ERROR)
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
+
+                startVpnTunnel(profile)
             }
             ACTION_DISCONNECT -> {
                 stopVpnTunnel()
@@ -119,23 +139,25 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         return START_NOT_STICKY
     }
 
-    private fun startVpnTunnel(profileId: String?) {
+    private fun startForegroundSafely(title: String, text: String) {
+        val notification = buildNotification(title, text)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, 0)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+    }
+
+    private fun startVpnTunnel(profile: VpnProfile) {
         serviceScope.launch {
             NyxtraVpnController.updateState(VpnState.CONNECTING)
-
-            val profile = if (profileId != null) {
-                MockProfileRepository.profiles.value.firstOrNull { it.id == profileId }
-            } else {
-                MockProfileRepository.getSelectedProfile()
-            }
-
-            if (profile == null) {
-                MockLogsRepository.addLog(LogLevel.ERROR, "TUNNEL", "Cannot start VPN: No profile found")
-                NyxtraVpnController.updateState(VpnState.ERROR)
-                stopSelf()
-                return@launch
-            }
-
             activeProfile = profile
             NyxtraVpnController.setActiveProfileId(profile.id)
 
@@ -149,8 +171,6 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 perAppPackages = selectedApps,
                 isPerAppWhitelist = true
             )
-
-            startForeground(NOTIFICATION_ID, buildNotification(profile.name, "Establishing secure tunnel..."))
 
             try {
                 // Ensure stale unix domain socket is deleted before starting
@@ -249,76 +269,90 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
 
     // PlatformInterface Direct FD Implementation
     override fun openTun(options: TunOptions): Int {
-        val builder = Builder()
-            .setSession("Nyxtra")
-            .setMtu(options.mtu)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            builder.setMetered(false)
-        }
-
-        var hasV4 = false
-        val inet4 = options.inet4Address
-        while (inet4.hasNext()) {
-            val addr = inet4.next()
-            builder.addAddress(addr.address(), addr.prefix())
-            hasV4 = true
-        }
-        if (!hasV4) {
-            builder.addAddress("172.19.0.1", 30)
-        }
-
-        var hasDns = false
-        val dns = options.dnsServerAddress
-        while (dns.hasNext()) {
-            builder.addDnsServer(dns.next())
-            hasDns = true
-        }
-        if (!hasDns) {
-            builder.addDnsServer("1.1.1.1")
-            builder.addDnsServer("8.8.8.8")
-        }
-
-        builder.addRoute("0.0.0.0", 0)
-
-        // Exclude Nyxtra app itself so proxy sockets bypass the TUN
         try {
-            builder.addDisallowedApplication(packageName)
-        } catch (e: Exception) {
-            Log.w(TAG, "Cannot exclude own package: ${e.message}")
-        }
+            val builder = Builder()
+                .setSession("Nyxtra")
+                .setMtu(options.mtu)
 
-        // Per-App Proxy configuration
-        val includePkg = options.includePackage
-        if (includePkg != null && includePkg.hasNext()) {
-            while (includePkg.hasNext()) {
-                val pkg = includePkg.next()
-                try {
-                    builder.addAllowedApplication(pkg)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Cannot add allowed package $pkg: ${e.message}")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                builder.setMetered(false)
+            }
+
+            var hasV4 = false
+            val inet4 = try { options.inet4Address } catch (_: Exception) { null }
+            if (inet4 != null) {
+                while (inet4.hasNext()) {
+                    val addr = inet4.next()
+                    builder.addAddress(addr.address(), addr.prefix())
+                    hasV4 = true
                 }
             }
-        }
+            if (!hasV4) {
+                builder.addAddress("172.19.0.1", 30)
+            }
 
-        val excludePkg = options.excludePackage
-        if (excludePkg != null && excludePkg.hasNext()) {
-            while (excludePkg.hasNext()) {
-                val pkg = excludePkg.next()
-                if (pkg != packageName) {
+            var hasDns = false
+            val dns = try { options.dnsServerAddress } catch (_: Exception) { null }
+            if (dns != null) {
+                while (dns.hasNext()) {
+                    builder.addDnsServer(dns.next())
+                    hasDns = true
+                }
+            }
+            if (!hasDns) {
+                builder.addDnsServer("1.1.1.1")
+                builder.addDnsServer("8.8.8.8")
+            }
+
+            builder.addRoute("0.0.0.0", 0)
+
+            // Exclude Nyxtra app itself so proxy sockets bypass the TUN
+            try {
+                builder.addDisallowedApplication(packageName)
+            } catch (e: Exception) {
+                Log.w(TAG, "Cannot exclude own package: ${e.message}")
+            }
+
+            // Per-App Proxy configuration
+            val includePkg = try { options.includePackage } catch (_: Exception) { null }
+            if (includePkg != null) {
+                while (includePkg.hasNext()) {
+                    val pkg = includePkg.next()
                     try {
-                        builder.addDisallowedApplication(pkg)
+                        builder.addAllowedApplication(pkg)
                     } catch (e: Exception) {
-                        Log.w(TAG, "Cannot add disallowed package $pkg: ${e.message}")
+                        Log.w(TAG, "Cannot add allowed package $pkg: ${e.message}")
                     }
                 }
             }
-        }
 
-        val pfd = builder.establish() ?: error("Failed to establish TUN interface")
-        vpnInterface = pfd
-        MockLogsRepository.addLog(LogLevel.INFO, "ENGINE", "Direct FD Handover complete - fd=${pfd.fd} MTU=${options.mtu}")
-        return pfd.fd
+            val excludePkg = try { options.excludePackage } catch (_: Exception) { null }
+            if (excludePkg != null) {
+                while (excludePkg.hasNext()) {
+                    val pkg = excludePkg.next()
+                    if (pkg != packageName) {
+                        try {
+                            builder.addDisallowedApplication(pkg)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Cannot add disallowed package $pkg: ${e.message}")
+                        }
+                    }
+                }
+            }
+
+            val pfd = builder.establish()
+            if (pfd == null) {
+                Log.e(TAG, "builder.establish() returned null")
+                error("Failed to establish TUN interface")
+            }
+            vpnInterface = pfd
+            MockLogsRepository.addLog(LogLevel.INFO, "ENGINE", "Direct FD Handover complete - fd=${pfd.fd} MTU=${options.mtu}")
+            return pfd.fd
+        } catch (t: Throwable) {
+            Log.e(TAG, "openTun error: ${t.message}", t)
+            MockLogsRepository.addLog(LogLevel.ERROR, "ENGINE", "openTun failed: ${t.message}")
+            throw t
+        }
     }
 
     override fun autoDetectInterfaceControl(fd: Int) {
@@ -434,10 +468,16 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     }
 
     override fun serviceReload() {
-        activeProfile?.let { startVpnTunnel(it.id) }
+        activeProfile?.let { startVpnTunnel(it) }
     }
 
-    override fun getSystemProxyStatus(): SystemProxyStatus? = null
+    override fun getSystemProxyStatus(): SystemProxyStatus {
+        val status = SystemProxyStatus()
+        status.available = false
+        status.enabled = false
+        return status
+    }
+
     override fun setSystemProxyEnabled(enabled: Boolean) {}
     override fun triggerNativeCrash() {}
     override fun writeDebugMessage(message: String?) {
