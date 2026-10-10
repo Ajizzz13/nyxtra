@@ -646,7 +646,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     override fun usePlatformAutoDetectInterfaceControl(): Boolean = true
     override fun usePlatformBridge(): Boolean = false
     override fun usePlatformShell(): Boolean = false
-    override fun useProcFS(): Boolean = false
+    override fun useProcFS(): Boolean = true
     override fun readSystemSSHHostKey(): String = ""
     override fun lookupSFTPServer(): String = ""
     override fun tailscaleHostname(): String = ""
@@ -655,7 +655,11 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     override fun openShellSession(user: PlatformUser?, path: String?, args: StringIterator?, dir: String?, uid: Int, gid: Int): ShellSession? = null
     override fun createBridge(options: BridgeOptions?): BridgeSession? = null
     override fun localDNSTransport(): LocalDNSTransport? = null
-    override fun findConnectionOwner(ipProtocol: Int, sourceAddress: String?, sourcePort: Int, destinationAddress: String?, destinationPort: Int): ConnectionOwner? = null
+    override fun findConnectionOwner(ipProtocol: Int, sourceAddress: String?, sourcePort: Int, destinationAddress: String?, destinationPort: Int): ConnectionOwner {
+        // Owner UID is resolved by core via procfs. Throwing here lets Go
+        // handle it as a plain error instead of a nil dereference panic.
+        throw Exception("connection owner resolved via procfs")
+    }
     override fun sendNotification(notification: io.nekohasekai.libbox.Notification?) {}
     override fun cancelNotification(identifier: String?, typeID: Int) {}
 
