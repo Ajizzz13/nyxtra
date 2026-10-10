@@ -21,6 +21,7 @@ import androidx.core.app.ServiceCompat
 import com.nyxtra.vpn.MainActivity
 import com.nyxtra.vpn.R
 import com.nyxtra.vpn.core.LibboxSetup
+import com.nyxtra.vpn.core.DebugFileLog
 import com.nyxtra.vpn.core.NyxtraVpnController
 import com.nyxtra.vpn.core.SingBoxConfigGenerator
 import com.nyxtra.vpn.data.model.EngineConfig
@@ -84,6 +85,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
+            DebugFileLog.append(this, "SERVICE", "onStartCommand action=${intent?.action}")
             val action = intent?.action ?: ACTION_CONNECT
             when (action) {
                 ACTION_CONNECT -> {
@@ -95,7 +97,9 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                     }
 
                     val title = profile?.name ?: "Nyxtra"
+                    DebugFileLog.append(this, "SERVICE", "profile found=${profile != null} starting foreground")
                     startForegroundSafely(title, "Establishing secure tunnel...")
+                    DebugFileLog.append(this, "SERVICE", "foreground started")
 
                     if (profile == null) {
                         MockLogsRepository.addLog(LogLevel.ERROR, "TUNNEL", "Cannot start VPN: No profile found")
@@ -259,11 +263,14 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 commandServer = null
 
                 val server = CommandServer(this@NyxtraVpnService, this@NyxtraVpnService)
+                DebugFileLog.append(this@NyxtraVpnService, "CORE", "CommandServer created, starting")
                 server.start()
                 commandServer = server
                 isCoreRunning = true
+                DebugFileLog.append(this@NyxtraVpnService, "CORE", "command server socket started")
 
                 server.startOrReloadService(configJson, OverrideOptions())
+                DebugFileLog.append(this@NyxtraVpnService, "CORE", "startOrReloadService returned")
                 MockLogsRepository.addLog(LogLevel.INFO, "CORE", "Sing-box core active with direct FD passing")
 
                 NyxtraVpnController.updateState(VpnState.CONNECTED)
@@ -362,6 +369,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     // PlatformInterface Direct FD Implementation
     override fun openTun(options: TunOptions): Int {
         try {
+            DebugFileLog.append(this, "TUN", "openTun entry")
             val builder = Builder()
                 .setSession("Nyxtra")
 
@@ -469,6 +477,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 throw Exception("Failed to establish TUN interface")
             }
             vpnInterface = pfd
+            DebugFileLog.append(this, "TUN", "openTun established fd=${pfd.fd} mtu=$mtu")
             MockLogsRepository.addLog(LogLevel.INFO, "ENGINE", "Direct FD Handover complete - fd=${pfd.fd} MTU=$mtu")
             return pfd.fd
         } catch (e: Exception) {

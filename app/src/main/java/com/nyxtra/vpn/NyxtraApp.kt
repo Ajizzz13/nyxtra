@@ -13,6 +13,7 @@ class NyxtraApp : Application() {
         installCrashHandler()
         MockProfileRepository.init(this)
         LibboxSetup.ensureInitialized(this)
+        CrashLogReporter.reportPreviousCrash(this)
     }
 
     private fun installCrashHandler() {
