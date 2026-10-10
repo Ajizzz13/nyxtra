@@ -13,8 +13,9 @@ class NyxtraApp : Application() {
         super.onCreate()
         installCrashHandler()
         MockProfileRepository.init(this)
-        LibboxSetup.ensureInitialized(this)
+        // Read previous crash artefacts BEFORE libbox setup truncates CrashReport file
         CrashLogReporter.reportPreviousCrash(this)
+        LibboxSetup.ensureInitialized(this)
     }
 
     private fun installCrashHandler() {

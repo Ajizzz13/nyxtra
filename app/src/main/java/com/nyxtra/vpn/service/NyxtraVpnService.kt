@@ -272,12 +272,21 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 server.startOrReloadService(configJson, OverrideOptions())
                 DebugFileLog.append(this@NyxtraVpnService, "CORE", "startOrReloadService returned")
                 MockLogsRepository.addLog(LogLevel.INFO, "CORE", "Sing-box core active with direct FD passing")
+                DebugFileLog.append(this@NyxtraVpnService, "CORE", "core active logged")
 
                 NyxtraVpnController.updateState(VpnState.CONNECTED)
                 MockLogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Connected. Low-latency gaming pipeline active.")
-                updateNotification(profile.name, "Connected • Ping: ${profile.pingMs ?: 20} ms")
+                DebugFileLog.append(this@NyxtraVpnService, "TUNNEL", "state CONNECTED")
+                try {
+                    updateNotification(profile.name, "Connected • Ping: ${profile.pingMs ?: 20} ms")
+                    DebugFileLog.append(this@NyxtraVpnService, "TUNNEL", "notification updated")
+                } catch (t: Throwable) {
+                    Log.e(TAG, "updateNotification failed: ${t.message}", t)
+                    DebugFileLog.append(this@NyxtraVpnService, "TUNNEL", "notification failed: ${t.message}")
+                }
 
                 startTrafficMonitor()
+                DebugFileLog.append(this@NyxtraVpnService, "TUNNEL", "traffic monitor started")
             } catch (t: Throwable) {
                 Log.e(TAG, "Sing-box core start failure: ${t.message}", t)
                 MockLogsRepository.addLog(LogLevel.ERROR, "CORE", "Core start failed: ${t.message}")
@@ -490,10 +499,17 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     }
 
     override fun autoDetectInterfaceControl(fd: Int) {
-        protect(fd)
+        try {
+            DebugFileLog.append(this, "NET", "autoDetectInterfaceControl fd=$fd")
+            protect(fd)
+        } catch (t: Throwable) {
+            Log.w(TAG, "autoDetectInterfaceControl notice: ${t.message}")
+            DebugFileLog.append(this, "NET", "protect failed: ${t.message}")
+        }
     }
 
     override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) {
+        DebugFileLog.append(this, "NET", "defaultInterfaceMonitor started")
         defaultInterfaceListener = listener
         registerNetworkCallback()
         // Defer the first callback off the Go thread to avoid re-entrant Java to Go deadlock
@@ -540,6 +556,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                         if (ifaceIndex >= 0) {
                             try {
                                 listener.updateDefaultInterface(ifaceName, ifaceIndex, false, false)
+                                DebugFileLog.append(this, "NET", "default iface=$ifaceName index=$ifaceIndex")
                             } catch (t: Throwable) {
                                 Log.w(TAG, "listener update notice: ${t.message}")
                             }
@@ -611,6 +628,10 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         // Pure Java empty iterator. Never create libbox Go objects here because
         // this callback runs on a Go thread and Java to Go re-entrancy can deadlock.
         // Default interface is still reported via updateDefaultInterface.
+        try {
+            DebugFileLog.append(this, "NET", "getInterfaces called, returning empty")
+        } catch (_: Exception) {
+        }
         return EmptyNetworkInterfaceIterator()
     }
 
@@ -640,6 +661,10 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler {
 
     // CommandServerHandler implementation
     override fun serviceStop() {
+        try {
+            DebugFileLog.append(this, "CORE", "serviceStop requested by core")
+        } catch (_: Exception) {
+        }
         stopVpnTunnel()
     }
 
