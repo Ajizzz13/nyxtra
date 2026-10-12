@@ -96,13 +96,17 @@ object SingBoxConfigGenerator {
         root.add("outbounds", outbounds)
 
         // 5. Route configuration (sing-box 1.14.0+ schema with hijack-dns action)
+        // When zero-routing game mode is on, domain sniffing is dropped
+        // entirely and only DNS hijack remains for name resolution.
         val routeObj = JsonObject().apply {
             addProperty("auto_detect_interface", true)
             addProperty("default_domain_resolver", "direct-dns")
             val rules = JsonArray().apply {
-                add(JsonObject().apply {
-                    addProperty("action", "sniff")
-                })
+                if (!engineConfig.zeroRoutingSniffing) {
+                    add(JsonObject().apply {
+                        addProperty("action", "sniff")
+                    })
+                }
                 add(JsonObject().apply {
                     addProperty("protocol", "dns")
                     addProperty("action", "hijack-dns")
@@ -197,6 +201,8 @@ object SingBoxConfigGenerator {
         if (engineConfig.tcpNoDelay) {
             out.addProperty("tcp_fast_open", true)
             out.addProperty("tcp_multi_path", false)
+            val keepalive = engineConfig.keepaliveIntervalSeconds.coerceIn(5, 60)
+            out.addProperty("tcp_keep_alive_interval", "${keepalive}s")
         }
 
         return out

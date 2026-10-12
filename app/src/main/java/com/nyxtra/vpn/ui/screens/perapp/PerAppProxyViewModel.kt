@@ -13,11 +13,8 @@ import kotlinx.coroutines.flow.stateIn
 
 class PerAppProxyViewModel : ViewModel() {
 
-    private val _enabled = MutableStateFlow(false)
-    val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
-
-    private val _isWhitelist = MutableStateFlow(true)
-    val isWhitelist: StateFlow<Boolean> = _isWhitelist.asStateFlow()
+    val enabled: StateFlow<Boolean> = MockAppRepository.enabled
+    val isWhitelist: StateFlow<Boolean> = MockAppRepository.isWhitelist
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -36,11 +33,11 @@ class PerAppProxyViewModel : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun toggleEnabled(value: Boolean) {
-        _enabled.value = value
+        MockAppRepository.setEnabled(value)
     }
 
     fun setMode(whitelist: Boolean) {
-        _isWhitelist.value = whitelist
+        MockAppRepository.setWhitelistMode(whitelist)
     }
 
     fun updateSearch(query: String) {

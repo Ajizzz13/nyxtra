@@ -32,14 +32,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nyxtra.vpn.data.repository.MockAppRepository
 import com.nyxtra.vpn.ui.components.AppItemRow
 import com.nyxtra.vpn.ui.theme.NyxtraDark
 import com.nyxtra.vpn.ui.theme.NyxtraDivider
@@ -54,6 +57,14 @@ fun PerAppProxyScreen(
     viewModel: PerAppProxyViewModel,
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        MockAppRepository.init(context.applicationContext)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            MockAppRepository.loadInstalledApps(context.applicationContext)
+        }
+    }
+
     val enabled by viewModel.enabled.collectAsState()
     val isWhitelist by viewModel.isWhitelist.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()

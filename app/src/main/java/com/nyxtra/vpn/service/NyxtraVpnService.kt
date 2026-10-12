@@ -29,6 +29,7 @@ import com.nyxtra.vpn.data.model.LogLevel
 import com.nyxtra.vpn.data.model.TrafficStats
 import com.nyxtra.vpn.data.model.VpnProfile
 import com.nyxtra.vpn.data.model.VpnState
+import com.nyxtra.vpn.data.repository.EngineConfigRepository
 import com.nyxtra.vpn.data.repository.MockAppRepository
 import com.nyxtra.vpn.data.repository.MockLogsRepository
 import com.nyxtra.vpn.data.repository.MockProfileRepository
@@ -91,6 +92,8 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
     override fun onCreate() {
         super.onCreate()
         MockProfileRepository.init(this)
+        MockAppRepository.init(this)
+        EngineConfigRepository.init(this)
         createNotificationChannel()
         LibboxSetup.ensureInitialized(this)
     }
@@ -242,17 +245,41 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
 
                 MockLogsRepository.addLog(LogLevel.DEBUG, "CONFIG", "Endpoint: ${profile.serverAddress}:${profile.serverPort}")
 
+                engineConfig = try {
+                    EngineConfigRepository.current()
+                } catch (t: Throwable) {
+                    Log.w(TAG, "engine config notice: ${t.message}")
+                    EngineConfig()
+                }
+
+                val perAppEnabled = try {
+                    MockAppRepository.isFilteringEnabled()
+                } catch (t: Throwable) {
+                    Log.w(TAG, "per-app flag notice: ${t.message}")
+                    false
+                }
+                val perAppWhitelist = try {
+                    MockAppRepository.isWhitelistMode()
+                } catch (t: Throwable) {
+                    Log.w(TAG, "per-app mode notice: ${t.message}")
+                    true
+                }
                 val selectedApps = try {
-                    MockAppRepository.getSelectedPackages().toList()
+                    if (perAppEnabled) MockAppRepository.getSelectedPackages().toList() else emptyList()
                 } catch (t: Throwable) {
                     Log.w(TAG, "getSelectedPackages notice: ${t.message}")
                     emptyList()
                 }
+                DebugFileLog.append(
+                    this@NyxtraVpnService,
+                    "CONFIG",
+                    "mtu=${engineConfig.mtu} stack=${engineConfig.tunStack.tag} perApp=$perAppEnabled whitelist=$perAppWhitelist apps=${selectedApps.size}"
+                )
                 val configJson = SingBoxConfigGenerator.generate(
                     profile = profile,
                     engineConfig = engineConfig,
                     perAppPackages = selectedApps,
-                    isPerAppWhitelist = selectedApps.isNotEmpty()
+                    isPerAppWhitelist = perAppWhitelist
                 )
 
                 try {
