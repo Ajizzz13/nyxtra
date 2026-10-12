@@ -710,44 +710,43 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
                     val name = netIface.name ?: continue
                     if (name.startsWith("tun") || name.startsWith("nyxtra")) continue
 
-                    val libIface = io.nekohasekai.libbox.NetworkInterface().apply {
-                        index = netIface.index
-                        this.name = name
-                        mtu = try {
-                            netIface.mtu
-                        } catch (_: Exception) {
-                            1500
-                        }
-                        // Linux IFF_UP | IFF_RUNNING, interface already checked isUp
-                        flags = 65
-
-                        val addrs = mutableListOf<String>()
-                        val ifaceAddrs = try {
-                            netIface.interfaceAddresses
-                        } catch (_: Exception) {
-                            null
-                        }
-                        if (ifaceAddrs != null) {
-                            for (interfaceAddress in ifaceAddrs) {
-                                try {
-                                    val host = interfaceAddress.address?.hostAddress ?: continue
-                                    if (host.startsWith("fe80", ignoreCase = true)) continue
+                    val addrs = mutableListOf<String>()
+                    val ifaceAddrs = try {
+                        netIface.interfaceAddresses
+                    } catch (_: Exception) {
+                        null
+                    }
+                    if (ifaceAddrs != null) {
+                        for (interfaceAddress in ifaceAddrs) {
+                            try {
+                                val host = interfaceAddress.address?.hostAddress
+                                if (!host.isNullOrBlank() && !host.startsWith("fe80", ignoreCase = true)) {
                                     val cleanHost = if (host.contains("%")) host.substringBefore("%") else host
                                     val prefix = interfaceAddress.networkPrefixLength.toInt()
                                     addrs.add("$cleanHost/$prefix")
-                                } catch (_: Exception) {
                                 }
+                            } catch (_: Exception) {
                             }
                         }
-                        if (addrs.isEmpty()) continue
-                        addresses = SimpleStringIterator(addrs)
+                    }
+                    if (addrs.isEmpty()) continue
 
-                        type = when {
-                            name.startsWith("wlan") -> Libbox.InterfaceTypeWIFI
-                            name.startsWith("rmnet") || name.startsWith("ccmni") || name.startsWith("pdp") -> Libbox.InterfaceTypeCellular
-                            name.startsWith("eth") -> Libbox.InterfaceTypeEthernet
-                            else -> Libbox.InterfaceTypeOther
-                        }
+                    val libIface = io.nekohasekai.libbox.NetworkInterface()
+                    libIface.index = netIface.index
+                    libIface.name = name
+                    libIface.mtu = try {
+                        netIface.mtu
+                    } catch (_: Exception) {
+                        1500
+                    }
+                    // Linux IFF_UP | IFF_RUNNING, interface already checked isUp
+                    libIface.flags = 65
+                    libIface.addresses = SimpleStringIterator(addrs)
+                    libIface.type = when {
+                        name.startsWith("wlan") -> Libbox.InterfaceTypeWIFI
+                        name.startsWith("rmnet") || name.startsWith("ccmni") || name.startsWith("pdp") -> Libbox.InterfaceTypeCellular
+                        name.startsWith("eth") -> Libbox.InterfaceTypeEthernet
+                        else -> Libbox.InterfaceTypeOther
                     }
                     result.add(libIface)
                 } catch (t: Throwable) {
