@@ -37,7 +37,15 @@ jobs:
           go-version: '1.25'
           cache: false
 
+      - name: Setup Android NDK r28
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28
+
       - name: Build libbox.aar from official SagerNet source
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           set -e
           git clone --depth 1 --branch "$SINGBOX_VERSION" https://github.com/SagerNet/sing-box.git "$RUNNER_TEMP/singbox-src"
