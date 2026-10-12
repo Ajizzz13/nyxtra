@@ -848,17 +848,17 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
                     ""
                 }
                 if (raw.isBlank()) continue
-                val clean = raw.replace(Regex("\u001B\\[[0-9;]*m"), "")
-                    .replace("(", "[").replace(")", "]").take(280)
-                val level = try {
-                    when (entry.level) {
-                        0 -> LogLevel.DEBUG
-                        1 -> LogLevel.INFO
-                        2 -> LogLevel.WARN
-                        else -> LogLevel.ERROR
-                    }
-                } catch (_: Exception) {
-                    LogLevel.INFO
+                val noAnsi = raw.replace(Regex("\u001B\\[[0-9;]*m"), "")
+                val clean = noAnsi.replace("(", "[").replace(")", "]").take(280)
+                // Core formats messages as LEVEL[uptime] ..., parse it directly
+                // because numeric levels do not match our enum order.
+                val levelName = noAnsi.substringBefore("[", "").trim().uppercase()
+                val level = when (levelName) {
+                    "TRACE", "DEBUG" -> LogLevel.DEBUG
+                    "INFO" -> LogLevel.INFO
+                    "WARN", "WARNING" -> LogLevel.WARN
+                    "ERROR", "FATAL", "PANIC" -> LogLevel.ERROR
+                    else -> LogLevel.INFO
                 }
                 MockLogsRepository.addLog(level, "CORE", clean)
             }
