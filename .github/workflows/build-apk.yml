@@ -1,5 +1,8 @@
 name: Build Nyxtra APKs
 
+env:
+  SINGBOX_VERSION: v1.14.2
+
 on:
   push:
     branches: [ "main" ]
@@ -28,11 +31,24 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Download Sing-box Core (libbox.aar)
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Build libbox.aar from official SagerNet source
         run: |
-          mkdir -p app/libs
-          rm -f app/libs/libbox-api.jar
-          curl -L -f -s -S -o app/libs/libbox.aar "https://github.com/Asterisk4Magisk/AndroidLibBoxLite/releases/download/v1.14.1-reF1nd/libbox.aar"
+          set -e
+          git clone --depth 1 --branch "$SINGBOX_VERSION" https://github.com/SagerNet/sing-box.git "$RUNNER_TEMP/singbox-src"
+          cd "$RUNNER_TEMP/singbox-src"
+          export PATH="$PATH:$(go env GOPATH)/bin"
+          go install github.com/sagernet/gomobile/cmd/gomobile github.com/sagernet/gomobile/cmd/gobind
+          go run ./cmd/internal/build_libbox --target android --platform android/arm64,android/arm
+          mkdir -p "$GITHUB_WORKSPACE/app/libs"
+          rm -f "$GITHUB_WORKSPACE/app/libs/libbox-api.jar" "$GITHUB_WORKSPACE/app/libs/libbox.aar"
+          cp libbox-legacy.aar "$GITHUB_WORKSPACE/app/libs/libbox.aar"
+          ls -la "$GITHUB_WORKSPACE/app/libs/"
 
       - name: Build Modern & Legacy APKs
         run: ./gradlew assembleModernRelease assembleLegacyRelease --stacktrace
