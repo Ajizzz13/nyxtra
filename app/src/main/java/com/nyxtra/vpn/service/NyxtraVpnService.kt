@@ -669,6 +669,21 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
         networkCallback = null
     }
 
+    private class SimpleStringIterator(private val list: List<String>) : StringIterator {
+        private var index = 0
+        override fun hasNext(): Boolean = index < list.size
+        override fun len(): Int = list.size
+        override fun next(): String = list[index++]
+    }
+
+    private class ListNetworkInterfaceIterator(
+        private val list: List<io.nekohasekai.libbox.NetworkInterface>
+    ) : NetworkInterfaceIterator {
+        private var index = 0
+        override fun hasNext(): Boolean = index < list.size
+        override fun next(): io.nekohasekai.libbox.NetworkInterface = list[index++]
+    }
+
     private class EmptyNetworkInterfaceIterator : NetworkInterfaceIterator {
         override fun hasNext(): Boolean = false
         override fun next(): io.nekohasekai.libbox.NetworkInterface {
@@ -677,14 +692,77 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
     }
 
     override fun getInterfaces(): NetworkInterfaceIterator {
-        // Pure Java empty iterator. Never create libbox Go objects here because
-        // this callback runs on a Go thread and Java to Go re-entrancy can deadlock.
-        // Default interface is still reported via updateDefaultInterface.
         try {
-            DebugFileLog.append(this, "NET", "getInterfaces called, returning empty")
+            DebugFileLog.append(this, "NET", "getInterfaces enumerating")
         } catch (_: Exception) {
         }
-        return EmptyNetworkInterfaceIterator()
+        val result = mutableListOf<io.nekohasekai.libbox.NetworkInterface>()
+        try {
+            val ifaces = NetworkInterface.getNetworkInterfaces() ?: return EmptyNetworkInterfaceIterator()
+            while (ifaces.hasMoreElements()) {
+                val netIface = try {
+                    ifaces.nextElement()
+                } catch (_: Exception) {
+                    continue
+                }
+                try {
+                    if (netIface.isLoopback || !netIface.isUp) continue
+                    val name = netIface.name ?: continue
+                    if (name.startsWith("tun") || name.startsWith("nyxtra")) continue
+
+                    val libIface = io.nekohasekai.libbox.NetworkInterface().apply {
+                        index = netIface.index
+                        this.name = name
+                        mtu = try {
+                            netIface.mtu
+                        } catch (_: Exception) {
+                            1500
+                        }
+                        // Linux IFF_UP | IFF_RUNNING, interface already checked isUp
+                        flags = 65
+
+                        val addrs = mutableListOf<String>()
+                        val ifaceAddrs = try {
+                            netIface.interfaceAddresses
+                        } catch (_: Exception) {
+                            null
+                        }
+                        if (ifaceAddrs != null) {
+                            for (interfaceAddress in ifaceAddrs) {
+                                try {
+                                    val host = interfaceAddress.address?.hostAddress ?: continue
+                                    if (host.startsWith("fe80", ignoreCase = true)) continue
+                                    val cleanHost = if (host.contains("%")) host.substringBefore("%") else host
+                                    val prefix = interfaceAddress.networkPrefixLength.toInt()
+                                    addrs.add("$cleanHost/$prefix")
+                                } catch (_: Exception) {
+                                }
+                            }
+                        }
+                        if (addrs.isEmpty()) continue
+                        addresses = SimpleStringIterator(addrs)
+
+                        type = when {
+                            name.startsWith("wlan") -> Libbox.InterfaceTypeWIFI
+                            name.startsWith("rmnet") || name.startsWith("ccmni") || name.startsWith("pdp") -> Libbox.InterfaceTypeCellular
+                            name.startsWith("eth") -> Libbox.InterfaceTypeEthernet
+                            else -> Libbox.InterfaceTypeOther
+                        }
+                    }
+                    result.add(libIface)
+                } catch (t: Throwable) {
+                    Log.w(TAG, "getInterfaces item notice: ${t.message}")
+                }
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "getInterfaces notice: ${t.message}")
+        }
+        if (result.isEmpty()) return EmptyNetworkInterfaceIterator()
+        try {
+            DebugFileLog.append(this, "NET", "getInterfaces found=${result.size}")
+        } catch (_: Exception) {
+        }
+        return ListNetworkInterfaceIterator(result)
     }
 
     // PlatformInterface stubs
@@ -771,7 +849,8 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
                     ""
                 }
                 if (raw.isBlank()) continue
-                val clean = raw.replace("(", "[").replace(")", "]").take(280)
+                val clean = raw.replace(Regex("\u001B\\[[0-9;]*m"), "")
+                    .replace("(", "[").replace(")", "]").take(280)
                 val level = try {
                     when (entry.level) {
                         0 -> LogLevel.DEBUG
