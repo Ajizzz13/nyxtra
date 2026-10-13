@@ -109,7 +109,7 @@ object MockAppRepository {
                         isSelected = selectedPackages.contains(it.packageName)
                     )
                 }
-                .sortedWith(compareBy({ !it.isSelected }, { it.appName.lowercase() }))
+                .sortedWith(compareBy({ it.appName.lowercase() }))
             _apps.value = list
             appsLoaded = true
         } catch (t: Throwable) {
@@ -120,9 +120,10 @@ object MockAppRepository {
     fun isAppsLoaded(): Boolean = appsLoaded
 
     private fun refreshSelection() {
+        // Keep stable alphabetical order. Never re-sort on toggle,
+        // otherwise the list jumps while unchecking multiple apps.
         _apps.update { list ->
             list.map { it.copy(isSelected = selectedPackages.contains(it.packageName)) }
-                .sortedWith(compareBy({ !it.isSelected }, { it.appName.lowercase() }))
         }
     }
 
