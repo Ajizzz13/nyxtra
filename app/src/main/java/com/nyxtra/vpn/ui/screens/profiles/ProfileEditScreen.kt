@@ -45,8 +45,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nyxtra.vpn.core.NyxtraVpnController
 import com.nyxtra.vpn.data.model.ProtocolType
 import com.nyxtra.vpn.data.model.TransportType
+import com.nyxtra.vpn.data.model.VpnState
 import com.nyxtra.vpn.ui.theme.NyxtraDark
 import com.nyxtra.vpn.ui.theme.NyxtraSurface
 import com.nyxtra.vpn.ui.theme.NyxtraTeal
@@ -61,6 +63,8 @@ fun ProfileEditScreen(
 ) {
     val context = LocalContext.current
     val currentProfile by viewModel.editingProfile.collectAsState()
+    val vpnState by NyxtraVpnController.vpnState.collectAsState()
+    val activeProfileId by NyxtraVpnController.activeProfileId.collectAsState()
 
     val profile = currentProfile ?: return
 
@@ -267,7 +271,12 @@ fun ProfileEditScreen(
                         allowInsecure = allowInsecure
                     )
                     viewModel.saveEditingProfile(updated)
-                    Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show()
+                    if ((vpnState == VpnState.CONNECTED || vpnState == VpnState.CONNECTING) && profile.id == activeProfileId) {
+                        NyxtraVpnController.stopVpn(context)
+                        Toast.makeText(context, "Saved, tunnel stopped, tap Connect to apply", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show()
+                    }
                     onNavigateBack()
                 },
                 modifier = Modifier

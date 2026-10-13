@@ -5,8 +5,8 @@ import android.util.Log
 import com.nyxtra.vpn.core.CrashLogReporter
 import com.nyxtra.vpn.core.LibboxSetup
 import com.nyxtra.vpn.data.repository.EngineConfigRepository
-import com.nyxtra.vpn.data.repository.MockAppRepository
-import com.nyxtra.vpn.data.repository.MockProfileRepository
+import com.nyxtra.vpn.data.repository.AppRepository
+import com.nyxtra.vpn.data.repository.ProfileRepository
 import java.io.File
 
 class NyxtraApp : Application() {
@@ -14,8 +14,8 @@ class NyxtraApp : Application() {
     override fun onCreate() {
         super.onCreate()
         installCrashHandler()
-        MockProfileRepository.init(this)
-        MockAppRepository.init(this)
+        ProfileRepository.init(this)
+        AppRepository.init(this)
         EngineConfigRepository.init(this)
         // Read previous crash artefacts BEFORE libbox setup truncates CrashReport file
         CrashLogReporter.reportPreviousCrash(this)

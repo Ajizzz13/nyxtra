@@ -1,6 +1,9 @@
 package com.nyxtra.vpn.ui.screens.dashboard
 
+import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
@@ -25,6 +29,8 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -38,6 +44,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +59,10 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import com.nyxtra.vpn.core.NyxtraVpnController
 import com.nyxtra.vpn.data.model.VpnState
 import com.nyxtra.vpn.ui.components.FloatingConnectionButton
 import com.nyxtra.vpn.ui.components.TunnelProfileCard
@@ -78,19 +89,74 @@ fun DashboardScreen(
 
     val vpnState by dashboardViewModel.vpnState.collectAsState()
     val trafficStats by dashboardViewModel.trafficStats.collectAsState()
+    val lastError by dashboardViewModel.lastError.collectAsState()
     val profiles by profilesViewModel.filteredProfiles.collectAsState()
     val isPingingAll by profilesViewModel.isPingingAll.collectAsState()
     val importDialogVisible by profilesViewModel.importDialogVisible.collectAsState()
 
     var showMenu by remember { mutableStateOf(false) }
+    var notifAsked by remember { mutableStateOf(false) }
 
     val selectedProfile = profiles.firstOrNull { it.isSelected } ?: profiles.firstOrNull()
+    val isTunnelActive = vpnState == VpnState.CONNECTED || vpnState == VpnState.CONNECTING
+
+    fun stopTunnelForProfileChange(reason: String) {
+        if (isTunnelActive) {
+            NyxtraVpnController.stopVpn(context)
+            Toast.makeText(context, reason, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val vpnPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             dashboardViewModel.onPermissionGranted(context)
+        }
+    }
+
+    val scanLauncher = rememberLauncherForActivityResult(contract = ScanContract()) { result ->
+        val contents = result.contents
+        if (!contents.isNullOrBlank()) {
+            val ok = profilesViewModel.importUri(contents)
+            if (ok) {
+                Toast.makeText(context, "Profile imported", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Invalid URI format", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun launchQrScanner() {
+        scanLauncher.launch(
+            ScanOptions()
+                .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                .setPrompt("Point camera at config QR code")
+                .setBeepEnabled(false)
+                .setBarcodeImageEnabled(false)
+        )
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            launchQrScanner()
+        } else {
+            Toast.makeText(context, "Camera permission needed for QR scan", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val notifPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notifAsked) {
+            notifAsked = true
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
     }
 
@@ -130,7 +196,11 @@ fun DashboardScreen(
 
                     // Scan QR
                     IconButton(onClick = {
-                        Toast.makeText(context, "Scan QR: Point camera at config QR code", Toast.LENGTH_SHORT).show()
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                            launchQrScanner()
+                        } else {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
                     }) {
                         Icon(
                             imageVector = Icons.Default.QrCodeScanner,
@@ -247,6 +317,35 @@ fun DashboardScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // Connection error banner with failure reason
+            if (vpnState == VpnState.ERROR) {
+                Card(
+                    shape = RoundedCornerShape(4.dp),
+                    colors = CardDefaults.cardColors(containerColor = NyxtraSurface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = lastError ?: "Connection failed",
+                            color = TextWhite,
+                            fontSize = 13.sp,
+                            maxLines = 2,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = onNavigateToLogs) {
+                            Text("Logs", color = NyxtraTeal, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
             // Profile List directly without tabs
             if (profiles.isEmpty()) {
                 Box(
@@ -285,13 +384,23 @@ fun DashboardScreen(
                     items(profiles, key = { it.id }) { profile ->
                         TunnelProfileCard(
                             profile = profile,
-                            onSelect = { profilesViewModel.selectProfile(profile.id) },
+                            onSelect = {
+                                if (profile.id != selectedProfile?.id) {
+                                    stopTunnelForProfileChange("Tunnel stopped, tap Connect to apply")
+                                }
+                                profilesViewModel.selectProfile(profile.id)
+                            },
                             onPing = { profilesViewModel.pingProfile(profile.id) },
                             onEdit = {
                                 profilesViewModel.startEditProfile(profile)
                                 onNavigateToEdit()
                             },
-                            onDelete = { profilesViewModel.deleteProfile(profile.id) },
+                            onDelete = {
+                                if (profile.id == selectedProfile?.id) {
+                                    stopTunnelForProfileChange("Tunnel stopped, profile deleted")
+                                }
+                                profilesViewModel.deleteProfile(profile.id)
+                            },
                             onShare = {
                                 val uri = profilesViewModel.exportUri(profile)
                                 clipboardManager.setText(AnnotatedString(uri))

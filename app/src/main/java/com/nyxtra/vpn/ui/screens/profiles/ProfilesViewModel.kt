@@ -6,7 +6,7 @@ import com.nyxtra.vpn.data.model.ProtocolType
 import com.nyxtra.vpn.data.model.TransportType
 import com.nyxtra.vpn.data.model.VpnProfile
 import com.nyxtra.vpn.data.parser.UriParser
-import com.nyxtra.vpn.data.repository.MockProfileRepository
+import com.nyxtra.vpn.data.repository.ProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 
 class ProfilesViewModel : ViewModel() {
 
-    val allProfiles: StateFlow<List<VpnProfile>> = MockProfileRepository.profiles
+    val allProfiles: StateFlow<List<VpnProfile>> = ProfileRepository.profiles
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -49,23 +49,23 @@ class ProfilesViewModel : ViewModel() {
     }
 
     fun selectProfile(id: String) {
-        MockProfileRepository.selectProfile(id)
+        ProfileRepository.selectProfile(id)
     }
 
     fun deleteProfile(id: String) {
-        MockProfileRepository.deleteProfile(id)
+        ProfileRepository.deleteProfile(id)
     }
 
     fun pingProfile(id: String) {
         viewModelScope.launch {
-            MockProfileRepository.pingProfile(id)
+            ProfileRepository.pingProfile(id)
         }
     }
 
     fun pingAll() {
         viewModelScope.launch {
             _isPingingAll.value = true
-            MockProfileRepository.pingAll()
+            ProfileRepository.pingAll()
             _isPingingAll.value = false
         }
     }
@@ -81,7 +81,7 @@ class ProfilesViewModel : ViewModel() {
     fun importUri(rawUri: String): Boolean {
         val parsed = UriParser.parse(rawUri)
         return if (parsed != null) {
-            MockProfileRepository.addProfile(parsed)
+            ProfileRepository.addProfile(parsed)
             _importDialogVisible.value = false
             true
         } else {
@@ -115,9 +115,9 @@ class ProfilesViewModel : ViewModel() {
     fun saveEditingProfile(profile: VpnProfile) {
         val exists = allProfiles.value.any { it.id == profile.id }
         if (exists) {
-            MockProfileRepository.updateProfile(profile)
+            ProfileRepository.updateProfile(profile)
         } else {
-            MockProfileRepository.addProfile(profile)
+            ProfileRepository.addProfile(profile)
         }
         _editingProfile.value = null
     }

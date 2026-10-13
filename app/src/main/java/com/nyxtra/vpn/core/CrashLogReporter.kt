@@ -3,7 +3,7 @@ package com.nyxtra.vpn.core
 import android.content.Context
 import android.util.Log
 import com.nyxtra.vpn.data.model.LogLevel
-import com.nyxtra.vpn.data.repository.MockLogsRepository
+import com.nyxtra.vpn.data.repository.LogsRepository
 import java.io.File
 
 object CrashLogReporter {
@@ -18,11 +18,11 @@ object CrashLogReporter {
                     ""
                 }
                 if (text.isNotBlank()) {
-                    MockLogsRepository.addLog(LogLevel.ERROR, "CRASH", "Previous run died, see details below")
+                    LogsRepository.addLog(LogLevel.ERROR, "CRASH", "Previous run died, see details below")
                     text.lines().take(25).forEach { line ->
                         val clean = line.replace("(", "[").replace(")", "]").take(220)
                         if (clean.isNotBlank()) {
-                            MockLogsRepository.addLog(LogLevel.ERROR, "CRASH", clean)
+                            LogsRepository.addLog(LogLevel.ERROR, "CRASH", clean)
                         }
                     }
                 }
@@ -40,21 +40,21 @@ object CrashLogReporter {
             val reports = dir.listFiles { f -> f.name.startsWith("CrashReport") } ?: emptyArray()
             val latest = reports.maxByOrNull { it.lastModified() }
             if (latest != null && latest.exists() && latest.length() > 0) {
-                MockLogsRepository.addLog(LogLevel.ERROR, "CORE", "Native crash report found: ${latest.name}")
+                LogsRepository.addLog(LogLevel.ERROR, "CORE", "Native crash report found: ${latest.name}")
                 try {
                     val lines = latest.readLines()
                     lines.take(30).forEach { line ->
                         val clean = line.replace("(", "[").replace(")", "]").take(220)
                         if (clean.isNotBlank()) {
-                            MockLogsRepository.addLog(LogLevel.ERROR, "CORE", clean)
+                            LogsRepository.addLog(LogLevel.ERROR, "CORE", clean)
                         }
                     }
                     if (lines.size > 35) {
-                        MockLogsRepository.addLog(LogLevel.ERROR, "CORE", "skipped ${lines.size - 35} middle lines")
+                        LogsRepository.addLog(LogLevel.ERROR, "CORE", "skipped ${lines.size - 35} middle lines")
                         lines.takeLast(5).forEach { line ->
                             val clean = line.replace("(", "[").replace(")", "]").take(220)
                             if (clean.isNotBlank()) {
-                                MockLogsRepository.addLog(LogLevel.ERROR, "CORE", clean)
+                                LogsRepository.addLog(LogLevel.ERROR, "CORE", clean)
                             }
                         }
                     }
@@ -68,11 +68,11 @@ object CrashLogReporter {
         try {
             val tail = DebugFileLog.readTail(context, 30)
             if (tail.isNotEmpty()) {
-                MockLogsRepository.addLog(LogLevel.INFO, "DEBUG", "Event trail from previous run below")
+                LogsRepository.addLog(LogLevel.INFO, "DEBUG", "Event trail from previous run below")
                 tail.forEach { line ->
                     val clean = line.replace("(", "[").replace(")", "]").take(220)
                     if (clean.isNotBlank()) {
-                        MockLogsRepository.addLog(LogLevel.INFO, "TRACE", clean)
+                        LogsRepository.addLog(LogLevel.INFO, "TRACE", clean)
                     }
                 }
             }

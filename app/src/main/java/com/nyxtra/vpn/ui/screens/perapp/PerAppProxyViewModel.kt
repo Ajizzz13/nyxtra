@@ -3,7 +3,7 @@ package com.nyxtra.vpn.ui.screens.perapp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nyxtra.vpn.data.model.AppInfo
-import com.nyxtra.vpn.data.repository.MockAppRepository
+import com.nyxtra.vpn.data.repository.AppRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,13 +13,13 @@ import kotlinx.coroutines.flow.stateIn
 
 class PerAppProxyViewModel : ViewModel() {
 
-    val enabled: StateFlow<Boolean> = MockAppRepository.enabled
-    val isWhitelist: StateFlow<Boolean> = MockAppRepository.isWhitelist
+    val enabled: StateFlow<Boolean> = AppRepository.enabled
+    val isWhitelist: StateFlow<Boolean> = AppRepository.isWhitelist
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val allApps: StateFlow<List<AppInfo>> = MockAppRepository.apps
+    val allApps: StateFlow<List<AppInfo>> = AppRepository.apps
 
     val filteredApps: StateFlow<List<AppInfo>> = combine(allApps, _searchQuery) { apps, query ->
         if (query.isBlank()) {
@@ -33,11 +33,11 @@ class PerAppProxyViewModel : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun toggleEnabled(value: Boolean) {
-        MockAppRepository.setEnabled(value)
+        AppRepository.setEnabled(value)
     }
 
     fun setMode(whitelist: Boolean) {
-        MockAppRepository.setWhitelistMode(whitelist)
+        AppRepository.setWhitelistMode(whitelist)
     }
 
     fun updateSearch(query: String) {
@@ -45,14 +45,14 @@ class PerAppProxyViewModel : ViewModel() {
     }
 
     fun toggleApp(packageName: String) {
-        MockAppRepository.toggleApp(packageName)
+        AppRepository.toggleApp(packageName)
     }
 
     fun selectAllGames() {
-        MockAppRepository.selectAllGames()
+        AppRepository.selectAllGames()
     }
 
     fun clearAll() {
-        MockAppRepository.clearAll()
+        AppRepository.clearAll()
     }
 }

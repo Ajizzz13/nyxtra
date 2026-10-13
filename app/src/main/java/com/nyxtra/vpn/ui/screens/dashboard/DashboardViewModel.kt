@@ -10,8 +10,8 @@ import com.nyxtra.vpn.data.model.LogLevel
 import com.nyxtra.vpn.data.model.TrafficStats
 import com.nyxtra.vpn.data.model.VpnProfile
 import com.nyxtra.vpn.data.model.VpnState
-import com.nyxtra.vpn.data.repository.MockLogsRepository
-import com.nyxtra.vpn.data.repository.MockProfileRepository
+import com.nyxtra.vpn.data.repository.LogsRepository
+import com.nyxtra.vpn.data.repository.ProfileRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -22,9 +22,13 @@ class DashboardViewModel : ViewModel() {
     val vpnState: StateFlow<VpnState> = NyxtraVpnController.vpnState
     val trafficStats: StateFlow<TrafficStats> = NyxtraVpnController.trafficStats
 
-    val activeProfile: StateFlow<VpnProfile?> = MockProfileRepository.profiles
+    val activeProfile: StateFlow<VpnProfile?> = ProfileRepository.profiles
         .map { list -> list.firstOrNull { it.isSelected } ?: list.firstOrNull() }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, MockProfileRepository.getSelectedProfile())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ProfileRepository.getSelectedProfile())
+
+    val lastError: StateFlow<String?> = LogsRepository.logs
+        .map { list -> list.lastOrNull { it.level == LogLevel.ERROR }?.message }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     fun toggleConnection(context: Context, onRequirePermission: (Intent) -> Unit) {
         when (vpnState.value) {
@@ -32,7 +36,7 @@ class DashboardViewModel : ViewModel() {
                 val profile = activeProfile.value
                 if (profile == null) {
                     Toast.makeText(context, "No profile selected", Toast.LENGTH_SHORT).show()
-                    MockLogsRepository.addLog(LogLevel.ERROR, "TUNNEL", "Cannot connect: No profile selected")
+                    LogsRepository.addLog(LogLevel.ERROR, "TUNNEL", "Cannot connect: No profile selected")
                     return
                 }
 

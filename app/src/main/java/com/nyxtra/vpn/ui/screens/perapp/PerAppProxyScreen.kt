@@ -42,7 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nyxtra.vpn.data.repository.MockAppRepository
+import com.nyxtra.vpn.data.repository.AppRepository
 import com.nyxtra.vpn.ui.components.AppItemRow
 import com.nyxtra.vpn.ui.theme.NyxtraDark
 import com.nyxtra.vpn.ui.theme.NyxtraDivider
@@ -59,9 +59,9 @@ fun PerAppProxyScreen(
 ) {
     val context = LocalContext.current
     LaunchedEffect(Unit) {
-        MockAppRepository.init(context.applicationContext)
+        AppRepository.init(context.applicationContext)
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            MockAppRepository.loadInstalledApps(context.applicationContext)
+            AppRepository.loadInstalledApps(context.applicationContext)
         }
     }
 

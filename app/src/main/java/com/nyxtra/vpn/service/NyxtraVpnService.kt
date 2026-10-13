@@ -30,9 +30,9 @@ import com.nyxtra.vpn.data.model.TrafficStats
 import com.nyxtra.vpn.data.model.VpnProfile
 import com.nyxtra.vpn.data.model.VpnState
 import com.nyxtra.vpn.data.repository.EngineConfigRepository
-import com.nyxtra.vpn.data.repository.MockAppRepository
-import com.nyxtra.vpn.data.repository.MockLogsRepository
-import com.nyxtra.vpn.data.repository.MockProfileRepository
+import com.nyxtra.vpn.data.repository.AppRepository
+import com.nyxtra.vpn.data.repository.LogsRepository
+import com.nyxtra.vpn.data.repository.ProfileRepository
 import io.nekohasekai.libbox.BridgeOptions
 import io.nekohasekai.libbox.BridgeSession
 import io.nekohasekai.libbox.CommandClient
@@ -91,8 +91,8 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
 
     override fun onCreate() {
         super.onCreate()
-        MockProfileRepository.init(this)
-        MockAppRepository.init(this)
+        ProfileRepository.init(this)
+        AppRepository.init(this)
         EngineConfigRepository.init(this)
         createNotificationChannel()
         LibboxSetup.ensureInitialized(this)
@@ -106,9 +106,9 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
                 ACTION_CONNECT -> {
                     val profileId = intent?.getStringExtra(EXTRA_PROFILE_ID)
                     val profile = if (profileId != null) {
-                        MockProfileRepository.profiles.value.firstOrNull { it.id == profileId }
+                        ProfileRepository.profiles.value.firstOrNull { it.id == profileId }
                     } else {
-                        MockProfileRepository.getSelectedProfile()
+                        ProfileRepository.getSelectedProfile()
                     }
 
                     val title = profile?.name ?: "Nyxtra"
@@ -117,7 +117,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
                     DebugFileLog.append(this, "SERVICE", "foreground started")
 
                     if (profile == null) {
-                        MockLogsRepository.addLog(LogLevel.ERROR, "TUNNEL", "Cannot start VPN: No profile found")
+                        LogsRepository.addLog(LogLevel.ERROR, "TUNNEL", "Cannot start VPN: No profile found")
                         NyxtraVpnController.updateState(VpnState.ERROR)
                         stopForegroundSafely()
                         stopSelf()
@@ -132,7 +132,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
             }
         } catch (t: Throwable) {
             Log.e(TAG, "Fatal exception in onStartCommand: ${t.message}", t)
-            MockLogsRepository.addLog(LogLevel.ERROR, "SERVICE", "Fatal startup error: ${t.message}")
+            LogsRepository.addLog(LogLevel.ERROR, "SERVICE", "Fatal startup error: ${t.message}")
             NyxtraVpnController.updateState(VpnState.ERROR)
             stopForegroundSafely()
             stopSelf()
@@ -214,36 +214,36 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
             activeProfile = profile
             NyxtraVpnController.setActiveProfileId(profile.id)
 
-            MockLogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Connecting to ${profile.name}")
+            LogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Connecting to ${profile.name}")
 
             try {
                 if (!LibboxSetup.ensureInitialized(this@NyxtraVpnService)) {
-                    MockLogsRepository.addLog(LogLevel.ERROR, "CORE", "Core runtime init failed")
+                    LogsRepository.addLog(LogLevel.ERROR, "CORE", "Core runtime init failed")
                     NyxtraVpnController.updateState(VpnState.ERROR)
                     stopVpnTunnel()
                     return@launch
                 }
 
                 if (profile.serverAddress.isBlank()) {
-                    MockLogsRepository.addLog(LogLevel.ERROR, "CONFIG", "Server address is empty")
+                    LogsRepository.addLog(LogLevel.ERROR, "CONFIG", "Server address is empty")
                     NyxtraVpnController.updateState(VpnState.ERROR)
                     stopVpnTunnel()
                     return@launch
                 }
                 if (profile.uuidOrPassword.isBlank()) {
-                    MockLogsRepository.addLog(LogLevel.ERROR, "CONFIG", "UUID or password is empty")
+                    LogsRepository.addLog(LogLevel.ERROR, "CONFIG", "UUID or password is empty")
                     NyxtraVpnController.updateState(VpnState.ERROR)
                     stopVpnTunnel()
                     return@launch
                 }
                 if (profile.serverPort <= 0 || profile.serverPort > 65535) {
-                    MockLogsRepository.addLog(LogLevel.ERROR, "CONFIG", "Server port out of range")
+                    LogsRepository.addLog(LogLevel.ERROR, "CONFIG", "Server port out of range")
                     NyxtraVpnController.updateState(VpnState.ERROR)
                     stopVpnTunnel()
                     return@launch
                 }
 
-                MockLogsRepository.addLog(LogLevel.DEBUG, "CONFIG", "Endpoint: ${profile.serverAddress}:${profile.serverPort}")
+                LogsRepository.addLog(LogLevel.DEBUG, "CONFIG", "Endpoint: ${profile.serverAddress}:${profile.serverPort}")
 
                 engineConfig = try {
                     EngineConfigRepository.current()
@@ -253,19 +253,19 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
                 }
 
                 val perAppEnabled = try {
-                    MockAppRepository.isFilteringEnabled()
+                    AppRepository.isFilteringEnabled()
                 } catch (t: Throwable) {
                     Log.w(TAG, "per-app flag notice: ${t.message}")
                     false
                 }
                 val perAppWhitelist = try {
-                    MockAppRepository.isWhitelistMode()
+                    AppRepository.isWhitelistMode()
                 } catch (t: Throwable) {
                     Log.w(TAG, "per-app mode notice: ${t.message}")
                     true
                 }
                 val selectedApps = try {
-                    if (perAppEnabled) MockAppRepository.getSelectedPackages().toList() else emptyList()
+                    if (perAppEnabled) AppRepository.getSelectedPackages().toList() else emptyList()
                 } catch (t: Throwable) {
                     Log.w(TAG, "getSelectedPackages notice: ${t.message}")
                     emptyList()
@@ -286,7 +286,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
                     Libbox.checkConfig(configJson)
                 } catch (t: Throwable) {
                     Log.e(TAG, "Config check failed: ${t.message}", t)
-                    MockLogsRepository.addLog(LogLevel.ERROR, "CONFIG", "Invalid config: ${t.message}")
+                    LogsRepository.addLog(LogLevel.ERROR, "CONFIG", "Invalid config: ${t.message}")
                     NyxtraVpnController.updateState(VpnState.ERROR)
                     stopVpnTunnel()
                     return@launch
@@ -319,11 +319,11 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
 
                 server.startOrReloadService(configJson, OverrideOptions())
                 DebugFileLog.append(this@NyxtraVpnService, "CORE", "startOrReloadService returned")
-                MockLogsRepository.addLog(LogLevel.INFO, "CORE", "Sing-box core active with direct FD passing")
+                LogsRepository.addLog(LogLevel.INFO, "CORE", "Sing-box core active with direct FD passing")
                 DebugFileLog.append(this@NyxtraVpnService, "CORE", "core active logged")
 
                 NyxtraVpnController.updateState(VpnState.CONNECTED)
-                MockLogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Connected. Low-latency gaming pipeline active.")
+                LogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Connected. Low-latency gaming pipeline active.")
                 DebugFileLog.append(this@NyxtraVpnService, "TUNNEL", "state CONNECTED")
                 try {
                     updateNotification(profile.name, "Connected • Ping: ${profile.pingMs ?: 20} ms")
@@ -339,7 +339,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
                 connectLogClient()
             } catch (t: Throwable) {
                 Log.e(TAG, "Sing-box core start failure: ${t.message}", t)
-                MockLogsRepository.addLog(LogLevel.ERROR, "CORE", "Core start failed: ${t.message}")
+                LogsRepository.addLog(LogLevel.ERROR, "CORE", "Core start failed: ${t.message}")
                 NyxtraVpnController.updateState(VpnState.ERROR)
                 stopVpnTunnel()
             }
@@ -350,7 +350,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
         serviceScope.launch {
             try {
                 NyxtraVpnController.updateState(VpnState.DISCONNECTING)
-                MockLogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Disconnect requested")
+                LogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Disconnect requested")
 
                 stopTrafficMonitor()
                 unregisterNetworkCallback()
@@ -376,7 +376,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
 
                 NyxtraVpnController.updateState(VpnState.DISCONNECTED)
                 NyxtraVpnController.updateTrafficStats(TrafficStats())
-                MockLogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Tunnel closed. Virtual TUN interface released.")
+                LogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Tunnel closed. Virtual TUN interface released.")
 
                 stopForegroundSafely()
                 stopSelf()
@@ -561,18 +561,18 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
             val pfd = builder.establish()
             if (pfd == null) {
                 Log.e(TAG, "builder.establish() returned null - VPN not prepared or revoked")
-                MockLogsRepository.addLog(LogLevel.ERROR, "ENGINE", "Failed to establish TUN: VPN permission missing or revoked")
+                LogsRepository.addLog(LogLevel.ERROR, "ENGINE", "Failed to establish TUN: VPN permission missing or revoked")
                 throw Exception("Failed to establish TUN interface")
             }
             vpnInterface = pfd
             DebugFileLog.append(this, "TUN", "openTun established fd=${pfd.fd} mtu=$mtu")
-            MockLogsRepository.addLog(LogLevel.INFO, "ENGINE", "Direct FD Handover complete - fd=${pfd.fd} MTU=$mtu")
+            LogsRepository.addLog(LogLevel.INFO, "ENGINE", "Direct FD Handover complete - fd=${pfd.fd} MTU=$mtu")
             return pfd.fd
         } catch (e: Exception) {
             throw e
         } catch (t: Throwable) {
             Log.e(TAG, "openTun error: ${t.message}", t)
-            MockLogsRepository.addLog(LogLevel.ERROR, "ENGINE", "openTun failed: ${t.message}")
+            LogsRepository.addLog(LogLevel.ERROR, "ENGINE", "openTun failed: ${t.message}")
             throw Exception("openTun failed: ${t.message}")
         }
     }
@@ -887,7 +887,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
                     "ERROR", "FATAL", "PANIC" -> LogLevel.ERROR
                     else -> LogLevel.INFO
                 }
-                MockLogsRepository.addLog(level, "CORE", clean)
+                LogsRepository.addLog(level, "CORE", clean)
             }
         } catch (t: Throwable) {
             Log.w(TAG, "writeLogs notice: ${t.message}")
@@ -975,6 +975,15 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
     private fun updateNotification(title: String, text: String) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
         manager?.notify(NOTIFICATION_ID, buildNotification(title, text))
+    }
+
+    override fun onRevoke() {
+        try {
+            LogsRepository.addLog(LogLevel.ERROR, "TUNNEL", "VPN permission revoked by system, stopping tunnel")
+            DebugFileLog.append(this, "SERVICE", "onRevoke, stopping tunnel")
+        } catch (_: Exception) {
+        }
+        stopVpnTunnel()
     }
 
     override fun onDestroy() {

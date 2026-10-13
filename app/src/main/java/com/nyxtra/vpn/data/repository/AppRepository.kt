@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.io.File
 
-object MockAppRepository {
+object AppRepository {
 
     private const val FILE_NAME = "nyxtra_perapp.json"
 

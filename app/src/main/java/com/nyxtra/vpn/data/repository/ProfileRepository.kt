@@ -18,7 +18,7 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
 
-object MockProfileRepository {
+object ProfileRepository {
 
     private val gson = Gson()
     private var storageFile: File? = null

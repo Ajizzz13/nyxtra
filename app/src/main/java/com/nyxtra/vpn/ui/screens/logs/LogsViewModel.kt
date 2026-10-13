@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nyxtra.vpn.data.model.LogEntry
 import com.nyxtra.vpn.data.model.LogLevel
-import com.nyxtra.vpn.data.repository.MockLogsRepository
+import com.nyxtra.vpn.data.repository.LogsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 
 class LogsViewModel : ViewModel() {
 
-    val allLogs: StateFlow<List<LogEntry>> = MockLogsRepository.logs
+    val allLogs: StateFlow<List<LogEntry>> = LogsRepository.logs
 
     private val _selectedLevel = MutableStateFlow<LogLevel?>(null)
     val selectedLevel: StateFlow<LogLevel?> = _selectedLevel.asStateFlow()
@@ -28,7 +28,7 @@ class LogsViewModel : ViewModel() {
     }
 
     fun clearLogs() {
-        MockLogsRepository.clear()
+        LogsRepository.clear()
     }
 
     fun getExportableText(): String {
