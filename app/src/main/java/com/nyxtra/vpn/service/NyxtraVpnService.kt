@@ -480,6 +480,11 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
             if (!hasV4) {
                 builder.addAddress("172.19.0.1", 30)
             }
+            try {
+                builder.addAddress("fdfe:dcba:9876::1", 126)
+            } catch (e: Exception) {
+                Log.w(TAG, "Cannot add IPv6 address: ${e.message}")
+            }
 
             var hasDns = false
             val dns = try { options.dnsServerAddress } catch (_: Exception) { null }
@@ -498,6 +503,11 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
             }
 
             builder.addRoute("0.0.0.0", 0)
+            try {
+                builder.addRoute("::", 0)
+            } catch (e: Exception) {
+                Log.w(TAG, "Cannot add IPv6 route: ${e.message}")
+            }
 
             // Mutually exclusive App Routing (addAllowedApplication and addDisallowedApplication cannot be mixed)
             val includeList = mutableListOf<String>()

@@ -59,6 +59,7 @@ object SingBoxConfigGenerator {
 
                 val addrArray = JsonArray().apply {
                     add("172.19.0.1/30")
+                    add("fdfe:dcba:9876::1/126")
                 }
                 add("address", addrArray)
                 addProperty("mtu", engineConfig.mtu)
