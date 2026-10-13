@@ -885,6 +885,9 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
                     ""
                 }
                 if (raw.isBlank()) continue
+                // Drop expected noise: without process-based route rules the
+                // core logs one of these per flow and buries real errors.
+                if (raw.contains("failed to search process")) continue
                 val noAnsi = raw.replace(Regex("\u001B\\[[0-9;]*m"), "")
                 val clean = noAnsi.replace("(", "[").replace(")", "]").take(280)
                 // Core formats messages as LEVEL[uptime] ..., parse it directly
