@@ -153,6 +153,12 @@ object SingBoxConfigGenerator {
                 val sniHost = if (profile.sni.isNotBlank()) profile.sni else profile.serverAddress
                 addProperty("server_name", sniHost)
                 addProperty("insecure", profile.allowInsecure)
+                // Mimic Chrome ClientHello so operator DPI treats
+                // the stream as regular browser traffic.
+                add("utls", JsonObject().apply {
+                    addProperty("enabled", true)
+                    addProperty("fingerprint", "chrome")
+                })
             }
             out.add("tls", tlsObj)
         }
