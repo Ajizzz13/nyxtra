@@ -28,16 +28,20 @@ object SingBoxConfigGenerator {
         root.add("log", logObj)
 
         // 2. DNS configuration (sing-box 1.14.0+ schema)
+        // remote-dns uses DoH on port 443 instead of plain DNS on 53. A UDP or
+        // TCP:53 resolver carried through the proxy fails on the very common
+        // servers that only forward TCP/443, which shows up as "connected but no
+        // internet" because every app fails to resolve a name.
         val dnsObj = JsonObject().apply {
             val servers = JsonArray().apply {
-                // Remote DNS queried through proxy tunnel
+                // Remote DNS queried through the proxy tunnel over TLS.
                 add(JsonObject().apply {
-                    addProperty("type", "tcp")
+                    addProperty("type", "https")
                     addProperty("tag", "remote-dns")
                     addProperty("server", "1.1.1.1")
                     addProperty("detour", "proxy")
                 })
-                // Direct DNS for outbound bootstrap resolving
+                // Direct resolver, only used to bootstrap the proxy server itself.
                 add(JsonObject().apply {
                     addProperty("type", "udp")
                     addProperty("tag", "direct-dns")
@@ -99,13 +103,19 @@ object SingBoxConfigGenerator {
 
         // 5. Route configuration (sing-box 1.14.0+ schema with hijack-dns action)
         // A "sniff" action is ALWAYS required: the hijack-dns rule matches on the
-        // sniffed protocol, so without it only plain DNS on port 53 is hijacked and
-        // DNS over 853/443/5353 would leak straight into the proxy. Game mode keeps
-        // the cost near zero by limiting sniffing to the DNS sniffer only.
+        // sniffed protocol, so without it DNS is not hijacked at all and the query
+        // falls through to the proxy as a raw UDP packet, which most servers drop.
+        // Game mode keeps the cost near zero by limiting sniffing to DNS only.
         val routeObj = JsonObject().apply {
             addProperty("auto_detect_interface", true)
             addProperty("default_domain_resolver", "direct-dns")
             val rules = JsonArray().apply {
+                // Private ranges stay on the physical network. Proxying them breaks
+                // LAN access and Android's own connectivity/captive-portal probes.
+                add(JsonObject().apply {
+                    addProperty("ip_is_private", true)
+                    addProperty("outbound", "direct")
+                })
                 add(JsonObject().apply {
                     addProperty("action", "sniff")
                     if (engineConfig.zeroRoutingSniffing) {
@@ -117,11 +127,32 @@ object SingBoxConfigGenerator {
                     addProperty("protocol", "dns")
                     addProperty("action", "hijack-dns")
                 })
+                // Reject QUIC (HTTP/3) so media clients fall back to TCP. A
+                // UDP/443 flow relayed through a TCP proxy completes its
+                // handshake but then stalls on larger segments, so pages and
+                // thumbnails load while video and music never start.
+                if (engineConfig.blockQuic) {
+                    add(JsonObject().apply {
+                        addProperty("network", "udp")
+                        addProperty("port", 443)
+                        addProperty("action", "reject")
+                    })
+                }
             }
             add("rules", rules)
             addProperty("final", "proxy")
         }
         root.add("route", routeObj)
+
+        // 6. Persistent cache. Without it every domain is resolved again after a
+        // restart, and each resolution is a full DoH round trip through the proxy,
+        // which is the dominant cost when browsing many hosts.
+        root.add("experimental", JsonObject().apply {
+            add("cache_file", JsonObject().apply {
+                addProperty("enabled", true)
+                addProperty("path", "nyxtra-cache.db")
+            })
+        })
 
         return gson.toJson(root)
     }

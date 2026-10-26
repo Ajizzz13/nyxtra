@@ -67,6 +67,10 @@ object EngineConfigRepository {
         save(_config.value.copy(tcpNoDelay = enabled))
     }
 
+    fun toggleBlockQuic(enabled: Boolean) {
+        save(_config.value.copy(blockQuic = enabled))
+    }
+
     fun updateKeepalive(seconds: Int) {
         save(_config.value.copy(keepaliveIntervalSeconds = seconds.coerceIn(5, 60)))
     }

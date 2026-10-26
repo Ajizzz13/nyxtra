@@ -28,7 +28,7 @@ def generate(mtu=1280, stack="mixed", zero_routing_sniffing=True, tcp_nodelay=Tr
         "log": {"level": "info", "timestamp": True},
         "dns": {
             "servers": [
-                {"type": "tcp", "tag": "remote-dns", "server": "1.1.1.1", "detour": "proxy"},
+                {"type": "https", "tag": "remote-dns", "server": "1.1.1.1", "detour": "proxy"},
                 {"type": "udp", "tag": "direct-dns", "server": "1.1.1.1"},
             ],
             "final": "remote-dns",
@@ -88,9 +88,15 @@ def generate(mtu=1280, stack="mixed", zero_routing_sniffing=True, tcp_nodelay=Tr
     cfg["route"] = {
         "auto_detect_interface": True,
         "default_domain_resolver": "direct-dns",
-        "rules": [sniff_rule, {"protocol": "dns", "action": "hijack-dns"}],
+        "rules": [
+            {"ip_is_private": True, "outbound": "direct"},
+            sniff_rule,
+            {"protocol": "dns", "action": "hijack-dns"},
+            {"network": "udp", "port": 443, "action": "reject"},
+        ],
         "final": "proxy",
     }
+    cfg["experimental"] = {"cache_file": {"enabled": True, "path": "nyxtra-cache.db"}}
     return cfg
 
 

@@ -70,37 +70,106 @@ class SingBoxConfigGeneratorTest {
         assertFalse("direct-dns must not target empty direct outbound", servers[1].asJsonObject.has("detour"))
     }
 
+    private fun routeRules(zeroRouting: Boolean) =
+        JsonParser.parseString(
+            SingBoxConfigGenerator.generate(
+                sampleProfile(), EngineConfig(zeroRoutingSniffing = zeroRouting)
+            )
+        ).asJsonObject.getAsJsonObject("route").getAsJsonArray("rules").map { it.asJsonObject }
+
+    // Rules without an "action" field (e.g. ip_is_private) default to "route".
+    private fun actionsOf(rules: List<com.google.gson.JsonObject>) =
+        rules.mapNotNull { it.get("action")?.asString }
+
+    @Test
+    fun privateRangesAreBypassed() {
+        // Proxying RFC1918 breaks LAN access and Android's connectivity probes.
+        for (zeroRouting in listOf(true, false)) {
+            val rules = routeRules(zeroRouting)
+            val bypass = rules.firstOrNull { it.has("ip_is_private") }
+            assertTrue("private ranges must bypass the tunnel", bypass != null)
+            assertEquals("direct", bypass!!.get("outbound").asString)
+        }
+    }
+
+    @Test
+    fun quicIsRejectedByDefault() {
+        // Media apps open QUIC (UDP/443) first. Through a TCP proxy the handshake
+        // succeeds but larger segments stall, so pages and thumbnails load while
+        // video and music never start. Rejecting it forces a TCP fallback.
+        val rules = routeRules(zeroRouting = true)
+        val reject = rules.firstOrNull { it.get("action")?.asString == "reject" }
+        assertTrue("QUIC must be rejected by default", reject != null)
+        assertEquals("udp", reject!!.get("network").asString)
+        assertEquals(443, reject.get("port").asInt)
+    }
+
+    @Test
+    fun quicRejectCanBeDisabled() {
+        val rules = JsonParser.parseString(
+            SingBoxConfigGenerator.generate(sampleProfile(), EngineConfig(blockQuic = false))
+        ).asJsonObject.getAsJsonObject("route").getAsJsonArray("rules").map { it.asJsonObject }
+        assertFalse(actionsOf(rules).contains("reject"))
+    }
+
+    @Test
+    fun cacheFileIsEnabled() {
+        val exp = JsonParser.parseString(
+            SingBoxConfigGenerator.generate(sampleProfile(), EngineConfig())
+        ).asJsonObject.getAsJsonObject("experimental")
+        assertTrue(exp.getAsJsonObject("cache_file").get("enabled").asBoolean)
+    }
+
     @Test
     fun gameModeStillSniffsButOnlyDns() {
         // Regression guard for the removed inbound.sniff field: hijack-dns matches on
         // the sniffed protocol, so the sniff action must always be present.
-        val route = JsonParser.parseString(
-            SingBoxConfigGenerator.generate(sampleProfile(), EngineConfig(zeroRoutingSniffing = true))
-        ).asJsonObject.getAsJsonObject("route")
-        val rules = route.getAsJsonArray("rules").map { it.asJsonObject }
-        val actions = rules.map { it.get("action").asString }
+        val rules = routeRules(zeroRouting = true)
+        val actions = actionsOf(rules)
         assertTrue("sniff action must always be present", actions.contains("sniff"))
         assertTrue(actions.contains("hijack-dns"))
-        assertEquals("proxy", route.get("final").asString)
 
-        val sniffRule = rules.first { it.get("action").asString == "sniff" }
+        val sniffRule = rules.first { it.get("action")?.asString == "sniff" }
         val sniffers = sniffRule.getAsJsonArray("sniffer").map { it.asString }
         assertEquals("game mode must sniff DNS only", listOf("dns"), sniffers)
     }
 
     @Test
     fun fullModeSniffsAllProtocols() {
-        val route = JsonParser.parseString(
-            SingBoxConfigGenerator.generate(sampleProfile(), EngineConfig(zeroRoutingSniffing = false))
-        ).asJsonObject.getAsJsonObject("route")
-        val rules = route.getAsJsonArray("rules").map { it.asJsonObject }
-        assertTrue(rules.map { it.get("action").asString }.contains("sniff"))
+        val rules = routeRules(zeroRouting = false)
+        assertTrue(actionsOf(rules).contains("sniff"))
 
-        val sniffRule = rules.first { it.get("action").asString == "sniff" }
+        val sniffRule = rules.first { it.get("action")?.asString == "sniff" }
         assertFalse(
             "full mode must not restrict the sniffer list",
             sniffRule.has("sniffer")
         )
+    }
+
+    @Test
+    fun remoteDnsUsesDohNotPlainDns() {
+        // Plain DNS on :53 through the proxy fails on servers that only forward
+        // TCP/443, which looks exactly like "connected but no internet".
+        val dns = JsonParser.parseString(
+            SingBoxConfigGenerator.generate(sampleProfile(), EngineConfig())
+        ).asJsonObject.getAsJsonObject("dns")
+        val remote = dns.getAsJsonArray("servers")[0].asJsonObject
+        assertEquals("remote-dns", remote.get("tag").asString)
+        assertEquals("https", remote.get("type").asString)
+        assertEquals("proxy", remote.get("detour").asString)
+    }
+
+    @Test
+    fun hijackDnsAlwaysFollowsSniffRule() {
+        // Order matters: hijack-dns only matches once the protocol has been sniffed.
+        for (zeroRouting in listOf(true, false)) {
+            val actions = actionsOf(routeRules(zeroRouting))
+            val sniffAt = actions.indexOf("sniff")
+            val hijackAt = actions.indexOf("hijack-dns")
+            assertTrue("sniff must be present", sniffAt >= 0)
+            assertTrue("hijack-dns must be present", hijackAt >= 0)
+            assertTrue("sniff must run before hijack-dns", sniffAt < hijackAt)
+        }
     }
 
     @Test

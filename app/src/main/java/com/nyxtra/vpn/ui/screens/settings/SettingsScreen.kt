@@ -172,6 +172,17 @@ fun SettingsScreen(
                 onCheckedChange = { viewModel.toggleTcpNoDelay(it) }
             )
 
+            Divider(color = NyxtraDivider)
+
+            // Block QUIC
+            SettingsSwitchItem(
+                title = "Block QUIC (HTTP/3)",
+                description = "Force TCP fallback so video and music can stream through the tunnel",
+                checked = config.blockQuic,
+                enabled = true,
+                onCheckedChange = { viewModel.toggleBlockQuic(it) }
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
             // Reset Button
