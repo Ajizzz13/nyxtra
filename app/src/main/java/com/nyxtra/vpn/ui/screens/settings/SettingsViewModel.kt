@@ -26,6 +26,10 @@ class SettingsViewModel : ViewModel() {
         EngineConfigRepository.toggleTcpNoDelay(enabled)
     }
 
+    fun toggleBlockQuic(enabled: Boolean) {
+        EngineConfigRepository.toggleBlockQuic(enabled)
+    }
+
     fun updateKeepalive(seconds: Int) {
         EngineConfigRepository.updateKeepalive(seconds)
     }

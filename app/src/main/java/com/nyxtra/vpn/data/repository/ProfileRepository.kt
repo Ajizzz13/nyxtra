@@ -13,12 +13,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
 
 object ProfileRepository {
+
+    private const val PING_TIMEOUT_MS = 2500
+    private const val PING_CONCURRENCY = 6
 
     private val gson = Gson()
     private var storageFile: File? = null
@@ -95,21 +100,31 @@ object ProfileRepository {
         persist()
     }
 
-    suspend fun pingProfile(id: String): Long = withContext(Dispatchers.IO) {
-        val target = _profiles.value.firstOrNull { it.id == id } ?: return@withContext -1L
-        val host = if (target.serverAddress.isNotBlank()) target.serverAddress else "1.1.1.1"
-        val port = if (target.serverPort > 0) target.serverPort else 443
-
-        val pingResult = try {
+    /**
+     * TCP connect latency to the profile endpoint. Not ICMP: Android denies raw
+     * sockets to unprivileged apps, so this measures handshake time to the port.
+     * Returns -1 on failure.
+     */
+    private fun measureTcpLatency(host: String, port: Int): Long {
+        return try {
             val start = System.currentTimeMillis()
-            val socket = Socket()
-            socket.connect(InetSocketAddress(host, port), 2500)
-            val duration = System.currentTimeMillis() - start
-            socket.close()
-            duration
-        } catch (e: Exception) {
+            // use{} guarantees close() even when connect() throws, which the
+            // previous implementation leaked on every timeout.
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(host, port), PING_TIMEOUT_MS)
+                System.currentTimeMillis() - start
+            }
+        } catch (_: Exception) {
             -1L
         }
+    }
+
+    suspend fun pingProfile(id: String): Long = withContext(Dispatchers.IO) {
+        val target = _profiles.value.firstOrNull { it.id == id } ?: return@withContext -1L
+        val host = target.serverAddress.ifBlank { "1.1.1.1" }
+        val port = if (target.serverPort > 0) target.serverPort else 443
+
+        val pingResult = measureTcpLatency(host, port)
 
         _profiles.update { list ->
             list.map {
@@ -123,21 +138,16 @@ object ProfileRepository {
     suspend fun pingAll() = withContext(Dispatchers.IO) {
         coroutineScope {
             val currentProfiles = _profiles.value
+            // Bound concurrency: previously every profile opened a socket at
+            // once, which exhausts FDs on large lists.
+            val semaphore = Semaphore(PING_CONCURRENCY)
             val deferredPings = currentProfiles.map { profile ->
                 async {
-                    val host = if (profile.serverAddress.isNotBlank()) profile.serverAddress else "1.1.1.1"
-                    val port = if (profile.serverPort > 0) profile.serverPort else 443
-                    val pingResult = try {
-                        val start = System.currentTimeMillis()
-                        val socket = Socket()
-                        socket.connect(InetSocketAddress(host, port), 2500)
-                        val duration = System.currentTimeMillis() - start
-                        socket.close()
-                        duration
-                    } catch (e: Exception) {
-                        -1L
+                    semaphore.withPermit {
+                        val host = profile.serverAddress.ifBlank { "1.1.1.1" }
+                        val port = if (profile.serverPort > 0) profile.serverPort else 443
+                        profile.id to measureTcpLatency(host, port)
                     }
-                    profile.id to pingResult
                 }
             }
 

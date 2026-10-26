@@ -7,6 +7,14 @@ android {
     namespace = "com.nyxtra.vpn"
     compileSdk = 34
 
+    testOptions {
+        unitTests {
+            // Robolectric needs the merged resources to resolve android.net.Uri
+            // and android.util.Base64 in plain JVM unit tests.
+            isIncludeAndroidResources = true
+        }
+    }
+
     defaultConfig {
         applicationId = "com.nyxtra.vpn"
         minSdk = 21
@@ -32,8 +40,16 @@ android {
             }
         }
     }
-    productFlavors {        create("modern") {
+    productFlavors {
+        // Each flavor ships as a distinct app so Modern and Legacy can coexist and
+        // upgrade independently. Base versionCode comes from CI so releases are
+        // actually installable as updates (it used to be hardcoded to 1).
+        val buildNumber = System.getenv("BUILD_NUMBER")?.toIntOrNull() ?: 1
+
+        create("modern") {
             dimension = "variant"
+            applicationIdSuffix = ".modern"
+            versionCode = 1000 + buildNumber
             minSdk = 28
             versionNameSuffix = "-modern-arm64"
             ndk {
@@ -42,6 +58,8 @@ android {
         }
         create("legacy") {
             dimension = "variant"
+            applicationIdSuffix = ".legacy"
+            versionCode = 2000 + buildNumber
             minSdk = 21
             versionNameSuffix = "-legacy-universal"
             ndk {
@@ -54,7 +72,17 @@ android {
         release {
             isMinifyEnabled = false
             val ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
-            signingConfig = if (!ksPath.isNullOrBlank() && file(ksPath).exists()) {
+            val hasKeystore = !ksPath.isNullOrBlank() && file(ksPath).exists()
+            if (!hasKeystore) {
+                // Shipping a debug-signed "release" APK silently breaks upgrades
+                // and distribution, so make the reason loud instead of silent.
+                logger.warn(
+                    "WARNING: ANDROID_KEYSTORE_PATH is not set or missing. " +
+                        "The release build will be signed with the DEBUG key and " +
+                        "cannot be published or used to upgrade an existing install."
+                )
+            }
+            signingConfig = if (hasKeystore) {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
@@ -81,6 +109,8 @@ android {
 
     buildFeatures {
         compose = true
+        // Needed for BuildConfig.VERSION_NAME in the startup log.
+        buildConfig = true
     }
 
     composeOptions {
@@ -124,6 +154,10 @@ dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     testImplementation("junit:junit:4.13.2")
+    // UriParser relies on android.net.Uri and android.util.Base64, which are
+    // stubs on the JVM. Robolectric provides real implementations for unit tests.
+    testImplementation("org.robolectric:robolectric:4.12.2")
+    testImplementation("androidx.test:core:1.5.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

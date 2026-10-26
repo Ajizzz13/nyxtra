@@ -91,9 +91,10 @@ fun TunnelProfileCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Ping display (clickable)
+            // Ping display (clickable). This is a TCP handshake time to the
+            // profile port, not ICMP, so label it as such.
             val (pingColor, pingText) = when {
-                profile.pingMs == null -> TextGray to "PING"
+                profile.pingMs == null -> TextGray to "TCP"
                 profile.pingMs < 0 -> NyxtraRed to "Timeout"
                 else -> NyxtraTeal to "${profile.pingMs} ms"
             }

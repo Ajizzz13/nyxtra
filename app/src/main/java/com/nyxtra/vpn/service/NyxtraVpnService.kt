@@ -68,6 +68,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
+import java.net.InetSocketAddress
 import java.net.NetworkInterface
 
 class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, CommandClientHandler {
@@ -346,33 +347,48 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
         }
     }
 
+    /**
+     * Releases everything the core holds: command server/client, the TUN file
+     * descriptor and the socket file. Safe to call when nothing is running.
+     */
+    private fun teardownCore() {
+        stopTrafficMonitor()
+        unregisterNetworkCallback()
+
+        try {
+            commandServer?.closeService()
+        } catch (t: Throwable) {
+            Log.w(TAG, "Core closeService note: ${t.message}")
+        }
+        disconnectLogClient()
+        try {
+            commandServer?.close()
+        } catch (t: Throwable) {
+            Log.w(TAG, "Core close note: ${t.message}")
+        }
+        commandServer = null
+        isCoreRunning = false
+        coreTrafficSeen = false
+        try {
+            File(filesDir, "command.sock").delete()
+        } catch (_: Exception) {
+        }
+
+        try {
+            vpnInterface?.close()
+        } catch (t: Throwable) {
+            Log.w(TAG, "TUN close note: ${t.message}")
+        }
+        vpnInterface = null
+    }
+
     private fun stopVpnTunnel() {
         serviceScope.launch {
             try {
                 NyxtraVpnController.updateState(VpnState.DISCONNECTING)
                 LogsRepository.addLog(LogLevel.INFO, "TUNNEL", "Disconnect requested")
 
-                stopTrafficMonitor()
-                unregisterNetworkCallback()
-
-                try {
-                    commandServer?.closeService()
-                } catch (t: Throwable) {
-                    Log.w(TAG, "Core closeService note: ${t.message}")
-                }
-                disconnectLogClient()
-                try {
-                    commandServer?.close()
-                } catch (t: Throwable) {
-                    Log.w(TAG, "Core close note: ${t.message}")
-                }
-                commandServer = null
-                isCoreRunning = false
-                coreTrafficSeen = false
-                File(filesDir, "command.sock").delete()
-
-                vpnInterface?.close()
-                vpnInterface = null
+                teardownCore()
 
                 NyxtraVpnController.updateState(VpnState.DISCONNECTED)
                 NyxtraVpnController.updateTrafficStats(TrafficStats())
@@ -391,18 +407,27 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
     private fun startTrafficMonitor() {
         trafficJob?.cancel()
         trafficJob = serviceScope.launch {
-            var lastRx = AndroidTrafficStats.getTotalRxBytes()
-            var lastTx = AndroidTrafficStats.getTotalTxBytes()
+            // Only used until the core reports its own counters. getTotalRxBytes()
+            // measures the WHOLE device (including traffic that never enters the
+            // tunnel), so scope it to this app's UID to avoid reporting numbers
+            // that have nothing to do with the VPN.
+            val myUid = android.os.Process.myUid()
+            var lastRx = AndroidTrafficStats.getUidRxBytes(myUid)
+            var lastTx = AndroidTrafficStats.getUidTxBytes(myUid)
             var totalDown = 0L
             var totalUp = 0L
 
             while (isActive) {
                 delay(1000)
-                val currentRx = AndroidTrafficStats.getTotalRxBytes()
-                val currentTx = AndroidTrafficStats.getTotalTxBytes()
+                val currentRx = AndroidTrafficStats.getUidRxBytes(myUid)
+                val currentTx = AndroidTrafficStats.getUidTxBytes(myUid)
 
-                val downSpeed = if (lastRx > 0 && currentRx >= lastRx) currentRx - lastRx else 0L
-                val upSpeed = if (lastTx > 0 && currentTx >= lastTx) currentTx - lastTx else 0L
+                // UNSUPPORTED (-1) means the kernel has no per-UID accounting.
+                val usable = currentRx != AndroidTrafficStats.UNSUPPORTED.toLong() &&
+                    currentTx != AndroidTrafficStats.UNSUPPORTED.toLong()
+
+                val downSpeed = if (usable && lastRx >= 0 && currentRx >= lastRx) currentRx - lastRx else 0L
+                val upSpeed = if (usable && lastTx >= 0 && currentTx >= lastTx) currentTx - lastTx else 0L
 
                 lastRx = currentRx
                 lastTx = currentTx
@@ -617,6 +642,21 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
         unregisterNetworkCallback()
     }
 
+    /**
+     * Tells the platform which physical network carries tunnel traffic. Without
+     * this, handing over between Wi-Fi and cellular can drop the tunnel because
+     * the socket stays bound to a network that just disappeared.
+     */
+    private fun bindUnderlyingNetwork(network: Network) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1) return
+        try {
+            setUnderlyingNetworks(arrayOf(network))
+            DebugFileLog.append(this, "NET", "underlying network bound")
+        } catch (t: Throwable) {
+            Log.w(TAG, "setUnderlyingNetworks notice: ${t.message}")
+        }
+    }
+
     private fun updateDefaultInterface() {
         val listener = defaultInterfaceListener ?: return
         try {
@@ -677,6 +717,7 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
                 .build()
             val callback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
+                    bindUnderlyingNetwork(network)
                     updateDefaultInterface()
                 }
                 override fun onLost(network: Network) {
@@ -822,9 +863,41 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
     override fun createBridge(options: BridgeOptions?): BridgeSession? = null
     override fun localDNSTransport(): LocalDNSTransport? = null
     override fun findConnectionOwner(ipProtocol: Int, sourceAddress: String?, sourcePort: Int, destinationAddress: String?, destinationPort: Int): ConnectionOwner {
-        // Owner UID is resolved by core via procfs. Throwing here lets Go
-        // handle it as a plain error instead of a nil dereference panic.
-        throw Exception("connection owner resolved via procfs")
+        // Per-app routing rules match on the owner UID / package. Returning a real
+        // owner (API 29+) makes include_package / exclude_package effective inside
+        // the core. On older releases, and whenever the lookup fails, throwing is
+        // still the correct behaviour: the core falls back to procfs and treats a
+        // Java exception as a plain error instead of dereferencing null.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            throw Exception("connection owner lookup requires API 29+")
+        }
+        val src = sourceAddress
+        val dst = destinationAddress
+        if (src.isNullOrBlank() || dst.isNullOrBlank()) {
+            throw Exception("connection owner lookup needs both addresses")
+        }
+
+        val uid = try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                ?: throw Exception("ConnectivityManager unavailable")
+            cm.getConnectionOwnerUid(ipProtocol, InetSocketAddress(src, sourcePort), InetSocketAddress(dst, destinationPort))
+        } catch (t: Throwable) {
+            throw Exception("connection owner lookup failed: ${t.message}")
+        }
+
+        if (uid < 0) throw Exception("connection owner unknown")
+
+        val owner = ConnectionOwner()
+        owner.setUserId(uid)
+        val packages = try {
+            packageManager.getPackagesForUid(uid)?.toList().orEmpty()
+        } catch (_: Exception) {
+            emptyList()
+        }
+        if (packages.isNotEmpty()) {
+            owner.setAndroidPackageNames(SimpleStringIterator(packages))
+        }
+        return owner
     }
     override fun sendNotification(notification: io.nekohasekai.libbox.Notification?) {}
     override fun cancelNotification(identifier: String?, typeID: Int) {}
@@ -839,7 +912,13 @@ class NyxtraVpnService : VpnService(), PlatformInterface, CommandServerHandler, 
     }
 
     override fun serviceReload() {
-        activeProfile?.let { startVpnTunnel(it) }
+        val profile = activeProfile ?: return
+        // A reload must release the previous TUN descriptor and command server
+        // first, otherwise the old interface and socket leak on every reload.
+        serviceScope.launch {
+            teardownCore()
+            startVpnTunnel(profile)
+        }
     }
 
     override fun getSystemProxyStatus(): SystemProxyStatus {

@@ -69,15 +69,67 @@ Setiap push ke branch `main` secara otomatis memicu GitHub Actions untuk memvali
 
 ## 🛠️ Build Mandiri
 
-Untuk mem-build APK secara lokal:
+> [!IMPORTANT]
+> Repo ini **tidak** menyertakan native library sing-box. `app/libs/libbox-api.jar`
+> hanya berisi binding Java (62 method `native`, **nol** `.so`), sehingga APK yang
+> di-build langsung dari hasil clone akan gagal saat connect dengan pesan
+> `Core runtime init failed`. Jalankan langkah 1 di bawah ini lebih dulu.
+
+### 1. Build `libbox.aar`
+
+Butuh Go 1.25+, Android NDK r28, dan `gomobile`.
 
 ```bash
-# Build varian Modern (arm64-v8a)
+export ANDROID_NDK_HOME=/path/to/ndk/28.x
+export PATH="$PATH:$(go env GOPATH)/bin"
+
+git clone --depth 1 --branch v1.14.2 https://github.com/SagerNet/sing-box.git
+cd sing-box
+go install github.com/sagernet/gomobile/cmd/gomobile \
+            github.com/sagernet/gomobile/cmd/gobind
+go run ./cmd/internal/build_libbox --target android --platform android/arm64,android/arm
+
+cp libbox-legacy.aar /path/to/nyxtra/app/libs/libbox.aar
+```
+
+`app/build.gradle.kts` memakai `libbox.aar` bila ada, dan hanya jatuh ke
+`libbox-api.jar` bila tidak — jadi menaruh file hasil build di `app/libs/`
+otomatis mengambil alih.
+
+### 2. Build APK
+
+```bash
+# Build varian Modern (arm64-v8a, minSdk 28)
 ./gradlew assembleModernRelease
 
-# Build varian Legacy (Universal)
+# Build varian Legacy (Universal, minSdk 21)
 ./gradlew assembleLegacyRelease
 ```
+
 APK output terletak pada:
 - `app/build/outputs/apk/modern/release/`
 - `app/build/outputs/apk/legacy/release/`
+
+Kedua varian memakai `applicationId` berbeda (`.modern` / `.legacy`) sehingga
+bisa terpasang berdampingan dan punya jalur upgrade sendiri. `versionCode`
+diturunkan dari `BUILD_NUMBER` di CI.
+
+### 3. Validasi konfigurasi core
+
+Unit test hanya memeriksa bentuk JSON. Untuk memastikan config benar-benar
+diterima core, jalankan validasi terhadap binary asli:
+
+```bash
+python3 tools/validate_singbox_config.py /path/to/sing-box
+```
+
+Skrip ini mereproduksi output generator untuk seluruh matriks setting
+(MTU × stack × mode sniffing × protokol × transport) dan menjalankannya lewat
+`sing-box check`. Langkah ini juga berjalan di CI.
+
+### 4. Test
+
+```bash
+./gradlew :app:testModernDebugUnitTest
+```
+
