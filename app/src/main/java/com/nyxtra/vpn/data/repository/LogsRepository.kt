@@ -9,16 +9,11 @@ import kotlinx.coroutines.flow.update
 
 object LogsRepository {
 
-    private val initialLogs = listOf(
-        LogEntry(level = LogLevel.INFO, tag = "SYSTEM", message = "Nyxtra Gaming Client v1.0.0 initialized"),
-        LogEntry(level = LogLevel.INFO, tag = "ENGINE", message = "Direct FD Handover configured: ON"),
-        LogEntry(level = LogLevel.INFO, tag = "KERNEL", message = "TUN stack mode: system Linux Kernel Direct"),
-        LogEntry(level = LogLevel.INFO, tag = "MTU", message = "Virtual interface MTU clamped to 1280 bytes"),
-        LogEntry(level = LogLevel.INFO, tag = "TCP", message = "TCP_NODELAY = enabled, keepalive = 15s"),
-        LogEntry(level = LogLevel.INFO, tag = "CORE", message = "Sing-box core v1.14.2 official ready for tunnel establishment")
-    )
-
-    private val _logs = MutableStateFlow<List<LogEntry>>(initialLogs)
+    // The previous "initial logs" hardcoded a fake telemetry snapshot (MTU 1280,
+    // TCP_NODELAY on, core ready) that never changed with the actual settings and
+    // appeared before anything had happened. Start empty; real state is logged by
+    // the service once it is known.
+    private val _logs = MutableStateFlow<List<LogEntry>>(emptyList())
     val logs: StateFlow<List<LogEntry>> = _logs.asStateFlow()
 
     fun addLog(level: LogLevel, tag: String, message: String) {

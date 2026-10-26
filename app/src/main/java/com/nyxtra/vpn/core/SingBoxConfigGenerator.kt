@@ -66,7 +66,8 @@ object SingBoxConfigGenerator {
                 addProperty("auto_route", true)
                 addProperty("strict_route", false)
                 addProperty("stack", engineConfig.tunStack.tag)
-                addProperty("sniff", !engineConfig.zeroRoutingSniffing)
+                // NOTE: inbound.sniff is a legacy field removed in sing-box 1.13.0.
+                // Protocol sniffing is configured via the "sniff" route action below.
 
                 if (perAppPackages.isNotEmpty()) {
                     val packageArray = JsonArray().apply {
@@ -97,17 +98,21 @@ object SingBoxConfigGenerator {
         root.add("outbounds", outbounds)
 
         // 5. Route configuration (sing-box 1.14.0+ schema with hijack-dns action)
-        // When zero-routing game mode is on, domain sniffing is dropped
-        // entirely and only DNS hijack remains for name resolution.
+        // A "sniff" action is ALWAYS required: the hijack-dns rule matches on the
+        // sniffed protocol, so without it only plain DNS on port 53 is hijacked and
+        // DNS over 853/443/5353 would leak straight into the proxy. Game mode keeps
+        // the cost near zero by limiting sniffing to the DNS sniffer only.
         val routeObj = JsonObject().apply {
             addProperty("auto_detect_interface", true)
             addProperty("default_domain_resolver", "direct-dns")
             val rules = JsonArray().apply {
-                if (!engineConfig.zeroRoutingSniffing) {
-                    add(JsonObject().apply {
-                        addProperty("action", "sniff")
-                    })
-                }
+                add(JsonObject().apply {
+                    addProperty("action", "sniff")
+                    if (engineConfig.zeroRoutingSniffing) {
+                        // Zero-sniffing game mode: DNS only, skip full protocol detection.
+                        add("sniffer", JsonArray().apply { add("dns") })
+                    }
+                })
                 add(JsonObject().apply {
                     addProperty("protocol", "dns")
                     addProperty("action", "hijack-dns")
@@ -157,8 +162,17 @@ object SingBoxConfigGenerator {
                 // the stream as regular browser traffic.
                 add("utls", JsonObject().apply {
                     addProperty("enabled", true)
-                    addProperty("fingerprint", "chrome")
+                    addProperty("fingerprint", profile.realityFingerprint.ifBlank { "chrome" })
                 })
+                // REALITY was previously parsed but never emitted, so every
+                // reality:// import failed at handshake time.
+                if (profile.isReality) {
+                    add("reality", JsonObject().apply {
+                        addProperty("enabled", true)
+                        addProperty("public_key", profile.realityPublicKey)
+                        addProperty("short_id", profile.realityShortId)
+                    })
+                }
             }
             out.add("tls", tlsObj)
         }

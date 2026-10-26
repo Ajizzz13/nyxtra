@@ -40,11 +40,24 @@ object UriParser {
         val transport = mapTransport(typeParam)
 
         val security = uri.getQueryParameter("security")?.lowercase()
-        val isTls = security == "tls" || security == "reality" || port == 443
+        // Never infer TLS from the port alone: ?security=none on :443 is legal and
+        // forcing TLS there produces an unreadable handshake failure. The port is
+        // only a fallback for URIs that omit the parameter entirely.
+        val isTls = when (security) {
+            "tls", "reality", "xtls" -> true
+            "none", "false", "" -> false
+            null -> port == 443
+            else -> false
+        }
 
         val sni = uri.getQueryParameter("sni") ?: ""
         val hostHeader = uri.getQueryParameter("host") ?: ""
         val path = uri.getQueryParameter("path")?.let { URLDecoder.decode(it, "UTF-8") } ?: "/"
+
+        // REALITY parameters (pbk/sid/fp). Absent pbk means plain TLS.
+        val publicKey = uri.getQueryParameter("pbk") ?: ""
+        val shortId = uri.getQueryParameter("sid") ?: ""
+        val fingerprint = uri.getQueryParameter("fp") ?: "chrome"
 
         return VpnProfile(
             name = fragment,
@@ -56,7 +69,10 @@ object UriParser {
             sni = sni,
             path = path,
             transport = transport,
-            isTls = isTls
+            isTls = isTls,
+            realityPublicKey = publicKey,
+            realityShortId = shortId,
+            realityFingerprint = fingerprint
         )
     }
 
@@ -74,6 +90,15 @@ object UriParser {
         val hostHeader = uri.getQueryParameter("host") ?: ""
         val path = uri.getQueryParameter("path")?.let { URLDecoder.decode(it, "UTF-8") } ?: "/"
 
+        // Trojan is TLS-first but plaintext Trojan exists; honour an explicit
+        // security=none instead of hardcoding TLS on.
+        val security = uri.getQueryParameter("security")?.lowercase()
+        val isTls = when (security) {
+            "none", "false" -> false
+            "tls", "reality", "xtls" -> true
+            else -> true
+        }
+
         return VpnProfile(
             name = fragment,
             protocol = ProtocolType.TROJAN,
@@ -84,13 +109,13 @@ object UriParser {
             sni = sni,
             path = path,
             transport = transport,
-            isTls = true
+            isTls = isTls
         )
     }
 
     private fun parseVmess(rawUri: String): VpnProfile {
         val b64 = rawUri.removePrefix("vmess://").removePrefix("VMESS://").trim()
-        val decoded = String(Base64.decode(b64, Base64.DEFAULT), StandardCharsets.UTF_8)
+        val decoded = String(decodeBase64Loose(b64), StandardCharsets.UTF_8)
         val json = gson.fromJson(decoded, JsonObject::class.java)
 
         val ps = json.get("ps")?.asString ?: "VMess Profile"
@@ -113,8 +138,32 @@ object UriParser {
             sni = sni,
             path = path,
             transport = mapTransport(net),
-            isTls = tls == "tls" || port == 443
+            // An explicit "tls": "" means plaintext; only fall back to the port
+            // heuristic when the field is missing altogether.
+            isTls = if (json.has("tls")) tls == "tls" || tls == "reality" else port == 443
         )
+    }
+
+    /**
+     * VMess links in the wild come as standard base64, URL-safe base64, with or
+     * without padding. Try each variant so a valid share link is never rejected.
+     */
+    private fun decodeBase64Loose(raw: String): ByteArray {
+        val cleaned = raw.trim()
+            .replace('-', '+')
+            .replace('_', '/')
+            .replace("\r", "")
+            .replace("\n", "")
+        val padded = when (cleaned.length % 4) {
+            2 -> "$cleaned=="
+            3 -> "$cleaned="
+            else -> cleaned
+        }
+        return try {
+            Base64.decode(padded, Base64.NO_WRAP)
+        } catch (_: Exception) {
+            Base64.decode(padded, Base64.DEFAULT or Base64.NO_WRAP)
+        }
     }
 
     private fun mapTransport(raw: String): TransportType {
@@ -130,15 +179,25 @@ object UriParser {
         val encodedName = URLEncoder.encode(profile.name, "UTF-8")
         return when (profile.protocol) {
             ProtocolType.VLESS -> {
-                val sec = if (profile.isTls) "tls" else "none"
+                val sec = when {
+                    profile.isReality -> "reality"
+                    profile.isTls -> "tls"
+                    else -> "none"
+                }
                 val net = profile.transport.network
                 val encodedPath = URLEncoder.encode(profile.path, "UTF-8")
-                "vless://${profile.uuidOrPassword}@${profile.serverAddress}:${profile.serverPort}?security=$sec&type=$net&path=$encodedPath&host=${profile.effectiveHostHeader}&sni=${profile.effectiveSni}#$encodedName"
+                val reality = if (profile.isReality) {
+                    "&pbk=${profile.realityPublicKey}&sid=${profile.realityShortId}&fp=${profile.realityFingerprint}"
+                } else {
+                    ""
+                }
+                "vless://${profile.uuidOrPassword}@${profile.serverAddress}:${profile.serverPort}?security=$sec&type=$net&path=$encodedPath&host=${profile.effectiveHostHeader}&sni=${profile.effectiveSni}$reality#$encodedName"
             }
             ProtocolType.TROJAN -> {
                 val net = profile.transport.network
                 val encodedPath = URLEncoder.encode(profile.path, "UTF-8")
-                "trojan://${profile.uuidOrPassword}@${profile.serverAddress}:${profile.serverPort}?security=tls&type=$net&path=$encodedPath&host=${profile.effectiveHostHeader}&sni=${profile.effectiveSni}#$encodedName"
+                val sec = if (profile.isTls) "tls" else "none"
+                "trojan://${profile.uuidOrPassword}@${profile.serverAddress}:${profile.serverPort}?security=$sec&type=$net&path=$encodedPath&host=${profile.effectiveHostHeader}&sni=${profile.effectiveSni}#$encodedName"
             }
             ProtocolType.VMESS -> {
                 val obj = JsonObject().apply {

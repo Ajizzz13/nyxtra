@@ -71,23 +71,50 @@ class SingBoxConfigGeneratorTest {
     }
 
     @Test
-    fun gameModeOmitsSniffRule() {
+    fun gameModeStillSniffsButOnlyDns() {
+        // Regression guard for the removed inbound.sniff field: hijack-dns matches on
+        // the sniffed protocol, so the sniff action must always be present.
         val route = JsonParser.parseString(
             SingBoxConfigGenerator.generate(sampleProfile(), EngineConfig(zeroRoutingSniffing = true))
         ).asJsonObject.getAsJsonObject("route")
-        val actions = route.getAsJsonArray("rules").map { it.asJsonObject.get("action").asString }
-        assertFalse(actions.contains("sniff"))
+        val rules = route.getAsJsonArray("rules").map { it.asJsonObject }
+        val actions = rules.map { it.get("action").asString }
+        assertTrue("sniff action must always be present", actions.contains("sniff"))
         assertTrue(actions.contains("hijack-dns"))
         assertEquals("proxy", route.get("final").asString)
+
+        val sniffRule = rules.first { it.get("action").asString == "sniff" }
+        val sniffers = sniffRule.getAsJsonArray("sniffer").map { it.asString }
+        assertEquals("game mode must sniff DNS only", listOf("dns"), sniffers)
     }
 
     @Test
-    fun fullModeKeepsSniffRule() {
+    fun fullModeSniffsAllProtocols() {
         val route = JsonParser.parseString(
             SingBoxConfigGenerator.generate(sampleProfile(), EngineConfig(zeroRoutingSniffing = false))
         ).asJsonObject.getAsJsonObject("route")
-        val actions = route.getAsJsonArray("rules").map { it.asJsonObject.get("action").asString }
-        assertTrue(actions.contains("sniff"))
+        val rules = route.getAsJsonArray("rules").map { it.asJsonObject }
+        assertTrue(rules.map { it.get("action").asString }.contains("sniff"))
+
+        val sniffRule = rules.first { it.get("action").asString == "sniff" }
+        assertFalse(
+            "full mode must not restrict the sniffer list",
+            sniffRule.has("sniffer")
+        )
+    }
+
+    @Test
+    fun tunInboundHasNoLegacySniffField() {
+        // inbound.sniff was removed in sing-box 1.13.0 and makes the whole config
+        // fail to initialise, so it must never be emitted again.
+        for (zeroRouting in listOf(true, false)) {
+            val tun = JsonParser.parseString(
+                SingBoxConfigGenerator.generate(
+                    sampleProfile(), EngineConfig(zeroRoutingSniffing = zeroRouting)
+                )
+            ).asJsonObject.getAsJsonArray("inbounds")[0].asJsonObject
+            assertFalse("legacy inbound.sniff must be absent", tun.has("sniff"))
+        }
     }
 
     @Test

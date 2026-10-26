@@ -61,6 +61,15 @@ jobs:
       - name: Run Unit Tests
         run: ./gradlew :app:testModernDebugUnitTest --stacktrace
 
+      - name: Validate generated config against real sing-box
+        run: |
+          set -e
+          curl -sSL -o /tmp/sing-box.tar.gz \
+            "https://github.com/SagerNet/sing-box/releases/download/${SINGBOX_VERSION}/sing-box-${SINGBOX_VERSION#v}-linux-amd64.tar.gz"
+          tar xzf /tmp/sing-box.tar.gz -C /tmp
+          python3 tools/validate_singbox_config.py \
+            "/tmp/sing-box-${SINGBOX_VERSION#v}-linux-amd64/sing-box"
+
       - name: Build Modern & Legacy APKs
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nyxtra-release.jks

@@ -38,7 +38,7 @@ Fitur teknis yang wajib ditanam di balik layar untuk memastikan ping rata:
  * Direct FD Handover: File Descriptor dari VpnService.establish() dioper langsung ke inbound TUN Sing-box. Menghilangkan ketergantungan socket proxy lokal 127.0.0.1.
  * Kustomisasi MTU Default: Nilai MTU virtual interface dikunci pada rentang 1280 hingga 1340 byte untuk mencegah pemotongan paket data di level BTS operator.
  * Stack TUN Mode system / mixed: Menyerahkan pemrosesan paket IP langsung ke kernel Linux Android, bukan lewat emulasi gVisor di memori userspace.
- * Zero Routing & Zero Sniffing: Saat mode game aktif, modul sniffing domain dan aturan pemilah rute kompleks dimatikan total agar paket data meluncur tanpa analisis payload berulang.
+ * Zero Routing & Zero Sniffing: Saat mode game aktif, sniffer dibatasi hanya ke protokol DNS (`sniffer: ["dns"]`) alih-alih dimatikan total. Rule `hijack-dns` mencocokkan protokol hasil sniff, jadi tanpa sniff DNS di port selain 53 (DoT 853, DoH 443, port kustom) akan lolos ke proxy dan gagal resolve.
  * Keepalive & TCP NoDelay: Memaksa socket outbound selalu mengaktifkan flag TCP_NODELAY dan interval keepalive agresif untuk menjaga modem HP tetap di status transmisi daya tinggi.
 6. Rencana Build & Varian Distribusi
 Aplikasi dirilis ke dalam 2 varian APK terpisah agar ukuran unduhan tetap kecil dan instruksi prosesor berjalan optimal:
